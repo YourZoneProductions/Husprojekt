@@ -83,7 +83,7 @@ export default async function ProtectedPage() {
       </header>
 
       <div className="mx-auto max-w-7xl">
-        <HouseApp floors={floors} />
+        <HouseApp floors={floors} houseId={house.id} />
       </div>
     </div>
   );

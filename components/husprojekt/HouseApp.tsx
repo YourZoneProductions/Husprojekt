@@ -17,9 +17,10 @@ type Floor = {
 
 type HouseAppProps = {
   floors: Floor[];
+  houseId: string;
 };
 
-export default function HouseApp({ floors }: HouseAppProps) {
+export default function HouseApp({ floors, houseId }: HouseAppProps) {
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [showNewProject, setShowNewProject] = useState(false);
 
@@ -193,12 +194,13 @@ export default function HouseApp({ floors }: HouseAppProps) {
     onNewProject={() => setShowNewProject(true)}
   />
 
-  {showNewProject && (
-    <NewProjectForm
-      room={selectedRoom}
-      onCancel={() => setShowNewProject(false)}
-    />
-  )}
+{showNewProject && (
+  <NewProjectForm
+    room={selectedRoom}
+    houseId={houseId}
+    onCancel={() => setShowNewProject(false)}
+  />
+)}
 </>
         )}
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 type Room = {
   id: string;
@@ -10,18 +11,74 @@ type Room = {
 
 type NewProjectFormProps = {
   room: Room;
+  houseId: string;
   onCancel: () => void;
 };
 
 export default function NewProjectForm({
   room,
+  houseId,
   onCancel,
 }: NewProjectFormProps) {
   const [name, setName] = useState("");
   const [budget, setBudget] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
+async function handleCreateProject() {
+  if (!name.trim()) {
+    setErrorMessage("Skriv et projektnavn.");
+    return;
+  }
+
+  setIsSaving(true);
+  setErrorMessage("");
+
+  const supabase = createClient();
+
+  const { data: project, error: projectError } = await supabase
+    .from("projects")
+    .insert({
+      house_id: houseId,
+      name: name.trim(),
+      status: "active",
+      budget: budget ? Number(budget) : 0,
+      expected_start: startDate || null,
+      expected_end: endDate || null,
+    })
+    .select("id")
+    .single();
+
+  if (projectError || !project) {
+    console.error(projectError);
+    setErrorMessage(
+      projectError?.message ?? "Projektet kunne ikke oprettes."
+    );
+    setIsSaving(false);
+    return;
+  }
+
+  const { error: roomError } = await supabase
+    .from("project_rooms")
+    .insert({
+      project_id: project.id,
+      room_id: room.id,
+    });
+
+  if (roomError) {
+    console.error(roomError);
+    setErrorMessage(
+      roomError.message ?? "Projektet blev oprettet, men rummet kunne ikke tilknyttes."
+    );
+    setIsSaving(false);
+    return;
+  }
+
+  setIsSaving(false);
+  onCancel();
+}
   return (
     <div className="mt-8 rounded-xl border border-slate-200 bg-white p-6">
       <div className="mb-6">
@@ -108,6 +165,11 @@ export default function NewProjectForm({
           </div>
         </div>
 
+{errorMessage && (
+  <p className="text-sm text-red-600">
+    {errorMessage}
+  </p>
+)}
         <div className="flex justify-end gap-3 border-t border-slate-100 pt-5">
           <button
             type="button"
@@ -118,11 +180,13 @@ export default function NewProjectForm({
           </button>
 
           <button
-            type="button"
-            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
-          >
-            Opret projekt
-          </button>
+  type="button"
+  onClick={handleCreateProject}
+  disabled={isSaving}
+  className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+>
+  {isSaving ? "Opretter..." : "Opret projekt"}
+</button>
         </div>
       </div>
     </div>
