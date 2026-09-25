@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import NewProjectForm from "./NewProjectForm";
 
 type Room = {
   id: string;
@@ -20,6 +21,7 @@ type HouseAppProps = {
 
 export default function HouseApp({ floors }: HouseAppProps) {
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+  const [showNewProject, setShowNewProject] = useState(false);
 
   const [openFloors, setOpenFloors] = useState<string[]>(
     floors.length > 0 ? [floors[0].id] : []
@@ -185,7 +187,19 @@ export default function HouseApp({ floors }: HouseAppProps) {
             </div>
           </>
         ) : (
-          <RoomView room={selectedRoom} />
+   <>
+  <RoomView
+    room={selectedRoom}
+    onNewProject={() => setShowNewProject(true)}
+  />
+
+  {showNewProject && (
+    <NewProjectForm
+      room={selectedRoom}
+      onCancel={() => setShowNewProject(false)}
+    />
+  )}
+</>
         )}
 
       </main>
@@ -194,7 +208,13 @@ export default function HouseApp({ floors }: HouseAppProps) {
   );
 }
 
-function RoomView({ room }: { room: Room }) {
+function RoomView({
+  room,
+  onNewProject,
+}: {
+  room: Room;
+  onNewProject: () => void;
+}) {
   return (
     <>
       <p className="text-sm text-slate-500">Rum</p>
@@ -212,9 +232,12 @@ function RoomView({ room }: { room: Room }) {
           )}
         </div>
 
-        <button className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white">
-          + Nyt projekt
-        </button>
+        <button
+  onClick={onNewProject}
+  className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white"
+>
+  + Nyt projekt
+</button>
       </div>
 
       <div className="mt-8 grid grid-cols-3 gap-4">
