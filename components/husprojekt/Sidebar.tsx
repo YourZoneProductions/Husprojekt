@@ -5,7 +5,7 @@ import { useState } from "react";
 type Room = {
   id: string;
   name: string;
-  area: number | null;
+  area_m2: number | null;
 };
 
 type Floor = {
@@ -23,6 +23,8 @@ export default function Sidebar({ floors }: SidebarProps) {
     floors.length > 0 ? [floors[0].id] : []
   );
 
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+
   function toggleFloor(floorId: string) {
     setOpenFloors((current) =>
       current.includes(floorId)
@@ -32,72 +34,83 @@ export default function Sidebar({ floors }: SidebarProps) {
   }
 
   return (
-    <aside className="w-72 min-h-screen bg-slate-900 text-white flex flex-col">
-      <div className="px-6 py-6 border-b border-slate-700">
-        <div className="text-xs uppercase tracking-widest text-slate-400">
-          Mit hjem
-        </div>
+    <aside className="min-h-[calc(100vh-73px)] w-72 border-r bg-white p-5">
+      <button
+        onClick={() => setSelectedRoom(null)}
+        className={`mb-6 w-full rounded-lg px-4 py-3 text-left font-medium transition ${
+          selectedRoom === null
+            ? "bg-slate-900 text-white"
+            : "text-slate-700 hover:bg-slate-100"
+        }`}
+      >
+        Overblik
+      </button>
 
-        <h1 className="text-2xl font-bold mt-1">HusProjekt</h1>
+      <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+        Etager
       </div>
 
-      <nav className="flex-1 px-3 py-5">
-        <button className="w-full text-left px-4 py-3 mb-4 rounded-lg bg-slate-800 font-medium">
-          🏠 &nbsp; Overblik
-        </button>
-
-        <div className="text-xs uppercase tracking-wider text-slate-500 px-4 mb-2">
-          Etager & rum
-        </div>
-
+      <div className="space-y-3">
         {floors.map((floor) => {
           const isOpen = openFloors.includes(floor.id);
 
           return (
-            <div key={floor.id} className="mb-2">
+            <div key={floor.id}>
               <button
                 onClick={() => toggleFloor(floor.id)}
-                className="w-full flex items-center justify-between px-4 py-3 rounded-lg hover:bg-slate-800 transition"
+                className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-left font-semibold text-slate-800 hover:bg-slate-50"
               >
-                <div className="flex items-center gap-2">
-                  <span className="text-slate-400">
-                    {isOpen ? "▾" : "▸"}
+                <span className="flex items-center gap-2">
+                  <span className="w-4 text-xs text-slate-400">
+                    {isOpen ? "▼" : "▶"}
                   </span>
 
-                  <span className="font-semibold">{floor.name}</span>
-                </div>
+                  {floor.name}
+                </span>
 
-                <span className="text-xs text-slate-400">
-                  {floor.rooms.length}
+                <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-500">
+                  {floor.rooms?.length ?? 0}
                 </span>
               </button>
 
               {isOpen && (
-                <div className="ml-5 mt-1 border-l border-slate-700">
-                  {floor.rooms.map((room) => (
-                    <button
-                      key={room.id}
-                      className="w-full flex items-center justify-between text-left pl-5 pr-3 py-2 text-sm text-slate-300 hover:text-white hover:bg-slate-800 rounded-r-lg transition"
-                    >
-                      <span>{room.name}</span>
+                <div className="ml-3 mt-1 space-y-1 border-l border-slate-200 pl-3">
+                  {[...(floor.rooms ?? [])]
+                    .sort((a, b) => a.name.localeCompare(b.name, "da"))
+                    .map((room) => {
+                      const isSelected = selectedRoom?.id === room.id;
 
-                      {room.area !== null && (
-                        <span className="text-xs text-slate-500 ml-2">
-                          {room.area.toLocaleString("da-DK")} m²
-                        </span>
-                      )}
-                    </button>
-                  ))}
+                      return (
+                        <button
+                          key={room.id}
+                          onClick={() => setSelectedRoom(room)}
+                          className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition ${
+                            isSelected
+                              ? "bg-slate-900 text-white"
+                              : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                          }`}
+                        >
+                          <span className="truncate">{room.name}</span>
+
+                          {room.area_m2 != null && (
+                            <span
+                              className={`ml-2 whitespace-nowrap text-xs ${
+                                isSelected
+                                  ? "text-slate-300"
+                                  : "text-slate-400"
+                              }`}
+                            >
+                              {Number(room.area_m2).toLocaleString("da-DK")} m²
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
                 </div>
               )}
             </div>
           );
         })}
-      </nav>
-
-      <div className="px-6 py-5 border-t border-slate-700">
-        <div className="text-xs text-slate-500">HusProjekt</div>
-        <div className="text-sm text-slate-300">Bolig & renovering</div>
       </div>
     </aside>
   );
