@@ -56,7 +56,32 @@ export default async function ProtectedPage() {
       </main>
     );
   }
+const { data: projects, error: projectsError } = await supabase
+  .from("projects")
+  .select(`
+    id,
+    name,
+    status,
+    budget,
+    actual_cost,
+    expected_start,
+    expected_end,
+    project_rooms (
+      room_id
+    )
+  `)
+  .eq("house_id", house.id);
 
+if (projectsError) {
+  return (
+    <main className="p-8">
+      <h1 className="text-2xl font-bold">HusProjekt</h1>
+      <p className="mt-4 text-red-600">
+        Kunne ikke hente projekter: {projectsError.message}
+      </p>
+    </main>
+  );
+}
   const floors = [...(house.floors ?? [])].sort((a, b) => {
     if (a.name === "Stueetage") return -1;
     if (b.name === "Stueetage") return 1;
@@ -83,7 +108,11 @@ export default async function ProtectedPage() {
       </header>
 
       <div className="mx-auto max-w-7xl">
-        <HouseApp floors={floors} houseId={house.id} />
+        <HouseApp
+  floors={floors}
+  houseId={house.id}
+  projects={projects ?? []}
+/>
       </div>
     </div>
   );

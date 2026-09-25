@@ -14,13 +14,29 @@ type Floor = {
   name: string;
   rooms: Room[];
 };
-
+type Project = {
+  id: string;
+  name: string;
+  status: string;
+  budget: number | null;
+  actual_cost: number | null;
+  expected_start: string | null;
+  expected_end: string | null;
+  project_rooms: {
+    room_id: string;
+  }[];
+};
 type HouseAppProps = {
   floors: Floor[];
   houseId: string;
+  projects: Project[];
 };
 
-export default function HouseApp({ floors, houseId }: HouseAppProps) {
+export default function HouseApp({
+  floors,
+  houseId,
+  projects,
+}: HouseAppProps) {
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [showNewProject, setShowNewProject] = useState(false);
 
@@ -190,9 +206,10 @@ export default function HouseApp({ floors, houseId }: HouseAppProps) {
         ) : (
    <>
   <RoomView
-    room={selectedRoom}
-    onNewProject={() => setShowNewProject(true)}
-  />
+  room={selectedRoom}
+  projects={projects}
+  onNewProject={() => setShowNewProject(true)}
+/>
 
 {showNewProject && (
   <NewProjectForm
@@ -212,11 +229,18 @@ export default function HouseApp({ floors, houseId }: HouseAppProps) {
 
 function RoomView({
   room,
+  projects,
   onNewProject,
 }: {
   room: Room;
+  projects: Project[];
   onNewProject: () => void;
 }) {
+  const roomProjects = projects.filter((project) =>
+    project.project_rooms?.some(
+      (projectRoom) => projectRoom.room_id === room.id
+    )
+  );
   return (
     <>
       <p className="text-sm text-slate-500">Rum</p>
@@ -249,26 +273,71 @@ function RoomView({
       </div>
 
       <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
-        <p className="text-sm text-slate-500">Projekter</p>
+  <p className="text-sm text-slate-500">Projekter</p>
 
-        <h3 className="text-xl font-semibold text-slate-900">
-          Projekter i {room.name}
-        </h3>
+  <h3 className="text-xl font-semibold text-slate-900">
+    Projekter i {room.name}
+  </h3>
 
-        <div className="mt-5 rounded-xl bg-slate-50 p-10 text-center">
-          <p className="font-medium text-slate-700">
-            Ingen projekter i dette rum endnu
-          </p>
+  {roomProjects.length === 0 ? (
+    <div className="mt-5 rounded-xl bg-slate-50 p-10 text-center">
+      <p className="font-medium text-slate-700">
+        Ingen projekter i dette rum endnu
+      </p>
 
-          <p className="mt-2 text-sm text-slate-500">
-            Opret det første projekt og begynd planlægningen.
-          </p>
+      <p className="mt-2 text-sm text-slate-500">
+        Opret det første projekt og begynd planlægningen.
+      </p>
 
-          <button className="mt-5 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white">
-            + Nyt projekt
-          </button>
+      <button
+        className="mt-5 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white"
+        onClick={onNewProject}
+      >
+        + Nyt projekt
+      </button>
+    </div>
+  ) : (
+    <div className="mt-5 space-y-3">
+      {roomProjects.map((project) => (
+        <div
+          key={project.id}
+          className="rounded-xl border border-slate-200 p-5"
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h4 className="text-lg font-semibold text-slate-900">
+                {project.name}
+              </h4>
+
+              <p className="mt-1 text-sm text-slate-500">
+                {project.status === "active" ? "Aktiv" : project.status}
+              </p>
+            </div>
+
+            <p className="font-semibold text-slate-900">
+              {(project.budget ?? 0).toLocaleString("da-DK")} kr.
+            </p>
+          </div>
+
+          {(project.expected_start || project.expected_end) && (
+            <p className="mt-4 text-sm text-slate-500">
+              {project.expected_start ?? "Ingen startdato"}
+              {" → "}
+              {project.expected_end ?? "Ingen slutdato"}
+            </p>
+          )}
         </div>
-      </section>
+      ))}
+
+      <button
+        className="mt-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white"
+        onClick={onNewProject}
+      >
+        + Nyt projekt
+      </button>
+    </div>
+  )}
+</section>
     </>
   );
 }
