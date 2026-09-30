@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import NewProjectForm from "./NewProjectForm";
 
 type Room = {
@@ -52,6 +53,7 @@ export default function HouseApp({
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [showNewProject, setShowNewProject] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [localProjects, setLocalProjects] = useState<Project[]>(projects);
 
   const [openFloors, setOpenFloors] = useState<string[]>(
     floors.length > 0 ? [floors[0].id] : []
@@ -66,6 +68,39 @@ export default function HouseApp({
   }
 function handleProjectCreated() {
   router.refresh();
+}
+function handleSubtaskUpdated(
+  projectId: string,
+  subtaskId: string,
+  newStatus: string
+) {
+  setLocalProjects((currentProjects) =>
+    currentProjects.map((project) =>
+      project.id === projectId
+        ? {
+            ...project,
+            subtasks: project.subtasks.map((subtask) =>
+              subtask.id === subtaskId
+                ? { ...subtask, status: newStatus }
+                : subtask
+            ),
+          }
+        : project
+    )
+  );
+
+  setSelectedProject((currentProject) =>
+    currentProject?.id === projectId
+      ? {
+          ...currentProject,
+          subtasks: currentProject.subtasks.map((subtask) =>
+            subtask.id === subtaskId
+              ? { ...subtask, status: newStatus }
+              : subtask
+          ),
+        }
+      : currentProject
+  );
 }
   function showOverview() {
     setSelectedRoom(null);
@@ -304,8 +339,30 @@ function handleProjectCreated() {
         <div className="flex items-start gap-3">
           <input
             type="checkbox"
-            checked={subtask.status === "done"}
-            readOnly
+            checked={subtask.status === "completed"}
+            onChange={async () => {
+  const supabase = createClient();
+
+  const newStatus = subtask.status === "completed" ? "todo" : "completed";
+
+  const { error } = await supabase
+    .from("subtasks")
+    .update({ status: newStatus })
+    .eq("id", subtask.id);
+
+  if (error) {
+  alert(
+    `Supabase fejl:\n${error.message}\nKode: ${error.code}\nDetaljer: ${error.details ?? "ingen"}`
+  );
+  return;
+}
+
+  handleSubtaskUpdated(
+  selectedProject.id,
+  subtask.id,
+  newStatus
+);
+}}
             className="mt-1 h-4 w-4"
           />
 
@@ -326,7 +383,7 @@ function handleProjectCreated() {
 ) : (
   <RoomView
     room={selectedRoom}
-    projects={projects}
+    projects={localProjects}
     onNewProject={() => setShowNewProject(true)}
     onProjectClick={(project) => setSelectedProject(project)}
   />
