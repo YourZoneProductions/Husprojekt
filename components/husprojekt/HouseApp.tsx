@@ -42,6 +42,7 @@ export default function HouseApp({
 
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [showNewProject, setShowNewProject] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
   const [openFloors, setOpenFloors] = useState<string[]>(
     floors.length > 0 ? [floors[0].id] : []
@@ -219,13 +220,21 @@ function handleProjectCreated() {
 
             </div>
           </>
-        ) : (
-   <>
+) : selectedProject !== null ? (
+  <div>
+    <p className="text-sm text-slate-500">Projekt</p>
+    <h2 className="mt-1 text-3xl font-bold text-slate-900">
+      {selectedProject.name}
+    </h2>
+  </div>
+) : (
   <RoomView
-  room={selectedRoom}
-  projects={projects}
-  onNewProject={() => setShowNewProject(true)}
-/>
+    room={selectedRoom}
+    projects={projects}
+    onNewProject={() => setShowNewProject(true)}
+    onProjectClick={(project) => setSelectedProject(project)}
+  />
+)}
 
 {showNewProject && (
   <NewProjectForm
@@ -235,8 +244,6 @@ function handleProjectCreated() {
     onProjectCreated={handleProjectCreated}
   />
 )}
-</>
-        )}
 
       </main>
 
@@ -248,10 +255,12 @@ function RoomView({
   room,
   projects,
   onNewProject,
+  onProjectClick,
 }: {
   room: Room;
   projects: Project[];
   onNewProject: () => void;
+  onProjectClick: (project: Project) => void;
 }) {
 const roomProjects = projects.filter((project) =>
   project.project_rooms?.some(
@@ -340,10 +349,11 @@ const totalSpent = activeProjects.reduce(
   ) : (
     <div className="mt-5 space-y-3">
       {roomProjects.map((project) => (
-        <div
-          key={project.id}
-          className="rounded-xl border border-slate-200 p-5"
-        >
+  <div
+    key={project.id}
+    onClick={() => onProjectClick(project)}
+    className="cursor-pointer rounded-xl border border-slate-200 p-5 hover:bg-slate-50"
+  >
           <div className="flex items-start justify-between gap-4">
             <div>
               <h4 className="text-lg font-semibold text-slate-900">
