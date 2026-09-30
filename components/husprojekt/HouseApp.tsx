@@ -56,6 +56,8 @@ export default function HouseApp({
   const [localProjects, setLocalProjects] = useState<Project[]>(projects);
   const [showNewSubtask, setShowNewSubtask] = useState(false);
   const [newSubtaskName, setNewSubtaskName] = useState("");
+  const [editingSubtaskId, setEditingSubtaskId] = useState<string | null>(null);
+  const [editingSubtaskName, setEditingSubtaskName] = useState("");
 
   const [openFloors, setOpenFloors] = useState<string[]>(
     floors.length > 0 ? [floors[0].id] : []
@@ -110,35 +112,70 @@ function handleSubtaskUpdated(
   const name = newSubtaskName.trim();
 
   if (!name) return;
-const supabase = createClient();
 
-const { data, error } = await supabase
-  .from("subtasks")
-  .insert({
-    project_id: selectedProject.id,
-    name: name,
-  })
-  .select()
-  .single();
+  const supabase = createClient();
 
-if (error) {
-  console.error("Kunne ikke oprette delopgave:", error);
-  return;
+  const { data, error } = await supabase
+    .from("subtasks")
+    .insert({
+      project_id: selectedProject.id,
+      name: name,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Kunne ikke oprette delopgave:", error);
+    return;
+  }
+
+  console.log("Ny delopgave oprettet:", data);
+
+  setSelectedProject((currentProject) =>
+    currentProject
+      ? {
+          ...currentProject,
+          subtasks: [...currentProject.subtasks, data],
+        }
+      : currentProject
+  );
+
+  setNewSubtaskName("");
+  setShowNewSubtask(false);
 }
 
-console.log("Ny delopgave oprettet:", data);
+async function handleUpdateSubtask(
+  subtaskId: string
+) {
+  const name = editingSubtaskName.trim();
+
+  if (!name) return;
+
+  const supabase = createClient();
+
+  const { error } = await supabase
+    .from("subtasks")
+    .update({ name: name })
+    .eq("id", subtaskId);
+
+  if (error) {
+    console.error("Kunne ikke opdatere delopgave:", error);
+    return;
+  }
 setSelectedProject((currentProject) =>
   currentProject
     ? {
         ...currentProject,
-        subtasks: [...currentProject.subtasks, data],
+        subtasks: currentProject.subtasks.map((subtask) =>
+          subtask.id === subtaskId
+            ? { ...subtask, name: name }
+            : subtask
+        ),
       }
     : currentProject
 );
-setNewSubtaskName("");
-setShowNewSubtask(false);
+setEditingSubtaskId(null);
 }
-
   function showOverview() {
     setSelectedRoom(null);
   }
@@ -413,52 +450,96 @@ setShowNewSubtask(false);
 )}
   <div className="mt-5 space-y-3">
     {selectedProject.subtasks.map((subtask) => (
-      <div
-        key={subtask.id}
-        className="rounded-xl border border-slate-200 p-4"
-      >
-        <div className="flex items-start gap-3">
+  <div
+    key={subtask.id}
+    className="rounded-xl border border-slate-200 p-4"
+  >
+    <div className="flex items-start gap-3">
+      <input
+        type="checkbox"
+        checked={subtask.status === "completed"}
+        onChange={async () => {
+          const supabase = createClient();
+
+          const newStatus =
+            subtask.status === "completed" ? "todo" : "completed";
+
+          const { error } = await supabase
+            .from("subtasks")
+            .update({ status: newStatus })
+            .eq("id", subtask.id);
+
+          if (error) {
+            alert(
+              `Supabase fejl:\n${error.message}\nKode: ${error.code}\nDetaljer: ${error.details ?? "ingen"}`
+            );
+            return;
+          }
+
+          handleSubtaskUpdated(
+            selectedProject.id,
+            subtask.id,
+            newStatus
+          );
+        }}
+        className="mt-1 h-4 w-4"
+      />
+
+      <div>
+        {editingSubtaskId === subtask.id ? (
           <input
-            type="checkbox"
-            checked={subtask.status === "completed"}
-            onChange={async () => {
-  const supabase = createClient();
-
-  const newStatus = subtask.status === "completed" ? "todo" : "completed";
-
-  const { error } = await supabase
-    .from("subtasks")
-    .update({ status: newStatus })
-    .eq("id", subtask.id);
-
-  if (error) {
-  alert(
-    `Supabase fejl:\n${error.message}\nKode: ${error.code}\nDetaljer: ${error.details ?? "ingen"}`
-  );
-  return;
-}
-
-  handleSubtaskUpdated(
-  selectedProject.id,
-  subtask.id,
-  newStatus
-);
-}}
-            className="mt-1 h-4 w-4"
+            type="text"
+            value={editingSubtaskName}
+            onChange={(event) =>
+              setEditingSubtaskName(event.target.value)
+            }
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
           />
+        ) : (
+          <p className="font-medium text-slate-900">
+            {subtask.name}
+          </p>
+        )}
 
-          <div>
-            <p className="font-medium text-slate-900">
-              {subtask.name}
-            </p>
-            <p className="mt-1 text-sm text-slate-500">
-              {subtask.status === "todo" ? "Ikke startet" : "Færdig"}
-            </p>
-          </div>
-        </div>
+        <p className="mt-1 text-sm text-slate-500">
+          {subtask.status === "todo" ? "Ikke startet" : "Færdig"}
+        </p>
       </div>
-    ))}
+
+      {editingSubtaskId === subtask.id ? (
+        <div className="ml-auto flex gap-3">
+          <button
+            type="button"
+            onClick={() => handleUpdateSubtask(subtask.id)}
+            className="text-sm font-medium text-slate-900 hover:text-slate-600"
+          >
+            Gem
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setEditingSubtaskId(null)}
+            className="text-sm font-medium text-slate-500 hover:text-slate-900"
+          >
+            Annuller
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => {
+            setEditingSubtaskId(subtask.id);
+            setEditingSubtaskName(subtask.name);
+          }}
+          className="ml-auto text-sm font-medium text-slate-500 hover:text-slate-900"
+        >
+          Rediger
+        </button>
+      )}
+    </div>
   </div>
+))}
+</div>
 </section>
 </div>
 ) : (
