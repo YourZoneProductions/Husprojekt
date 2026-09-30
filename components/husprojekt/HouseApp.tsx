@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import NewProjectForm from "./NewProjectForm";
 
 type Room = {
@@ -37,6 +38,8 @@ export default function HouseApp({
   houseId,
   projects,
 }: HouseAppProps) {
+  const router = useRouter();
+
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [showNewProject, setShowNewProject] = useState(false);
 
@@ -51,7 +54,9 @@ export default function HouseApp({
         : [...current, floorId]
     );
   }
-
+function handleProjectCreated() {
+  router.refresh();
+}
   function showOverview() {
     setSelectedRoom(null);
   }
@@ -154,9 +159,20 @@ export default function HouseApp({
             </p>
 
             <div className="mt-8 grid grid-cols-4 gap-4">
-              <StatCard title="Aktive projekter" value="0" />
-              <StatCard title="Budget" value="0 kr." />
-              <StatCard title="Forbrugt" value="0 kr." />
+<StatCard
+  title="Aktive projekter"
+  value="0"
+/>
+
+<StatCard
+  title="Budget"
+  value="0 kr."
+/>
+
+<StatCard
+  title="Forbrugt"
+  value="0 kr."
+/>
               <StatCard
                 title="Rum"
                 value={String(
@@ -216,6 +232,7 @@ export default function HouseApp({
     room={selectedRoom}
     houseId={houseId}
     onCancel={() => setShowNewProject(false)}
+    onProjectCreated={handleProjectCreated}
   />
 )}
 </>
@@ -236,11 +253,26 @@ function RoomView({
   projects: Project[];
   onNewProject: () => void;
 }) {
-  const roomProjects = projects.filter((project) =>
-    project.project_rooms?.some(
-      (projectRoom) => projectRoom.room_id === room.id
-    )
-  );
+const roomProjects = projects.filter((project) =>
+  project.project_rooms?.some(
+    (projectRoom) => projectRoom.room_id === room.id
+  )
+);
+
+const activeProjects = roomProjects.filter(
+  (project) => project.status === "active"
+);
+
+const totalBudget = activeProjects.reduce(
+  (sum, project) => sum + (project.budget ?? 0),
+  0
+);
+
+const totalSpent = activeProjects.reduce(
+  (sum, project) => sum + (project.actual_cost ?? 0),
+  0
+);
+
   return (
     <>
       <p className="text-sm text-slate-500">Rum</p>

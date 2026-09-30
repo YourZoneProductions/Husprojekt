@@ -13,12 +13,14 @@ type NewProjectFormProps = {
   room: Room;
   houseId: string;
   onCancel: () => void;
+  onProjectCreated: () => void;
 };
 
 export default function NewProjectForm({
   room,
   houseId,
   onCancel,
+  onProjectCreated,
 }: NewProjectFormProps) {
   const [name, setName] = useState("");
   const [budget, setBudget] = useState("");
@@ -76,8 +78,9 @@ async function handleCreateProject() {
     return;
   }
 
-  setIsSaving(false);
-  onCancel();
+setIsSaving(false);
+onProjectCreated();
+onCancel();
 }
   return (
     <div className="mt-8 rounded-xl border border-slate-200 bg-white p-6">
