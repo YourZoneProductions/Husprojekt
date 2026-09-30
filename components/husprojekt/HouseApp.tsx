@@ -222,11 +222,61 @@ function handleProjectCreated() {
           </>
 ) : selectedProject !== null ? (
   <div>
-    <p className="text-sm text-slate-500">Projekt</p>
-    <h2 className="mt-1 text-3xl font-bold text-slate-900">
-      {selectedProject.name}
-    </h2>
+  <button
+    onClick={() => setSelectedProject(null)}
+    className="mb-6 text-sm font-medium text-slate-600 hover:text-slate-900"
+  >
+    ← Tilbage til {selectedRoom.name}
+  </button>
+
+  <p className="text-sm text-slate-500">Projekt</p>
+
+  <div className="mt-1 flex items-center justify-between">
+    <div>
+      <h2 className="text-3xl font-bold text-slate-900">
+        {selectedProject.name}
+      </h2>
+      <p className="mt-2 text-sm text-slate-500">
+        Status: {selectedProject.status === "active" ? "Aktiv" : selectedProject.status}
+      </p>
+    </div>
   </div>
+
+  <div className="mt-8 grid grid-cols-3 gap-4">
+    <StatCard
+      title="Budget"
+      value={`${(selectedProject.budget ?? 0).toLocaleString("da-DK")} kr.`}
+    />
+    <StatCard
+      title="Forbrugt"
+      value={`${(selectedProject.actual_cost ?? 0).toLocaleString("da-DK")} kr.`}
+    />
+    <StatCard
+      title="Tilbage"
+      value={`${((selectedProject.budget ?? 0) - (selectedProject.actual_cost ?? 0)).toLocaleString("da-DK")} kr.`}
+    />
+  </div>
+
+  <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
+    <p className="text-sm text-slate-500">Tidsplan</p>
+
+    <div className="mt-4 grid grid-cols-2 gap-6">
+      <div>
+        <p className="text-sm text-slate-500">Startdato</p>
+        <p className="mt-1 font-medium text-slate-900">
+          {selectedProject.expected_start ?? "Ikke angivet"}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-sm text-slate-500">Slutdato</p>
+        <p className="mt-1 font-medium text-slate-900">
+          {selectedProject.expected_end ?? "Ikke angivet"}
+        </p>
+      </div>
+    </div>
+  </section>
+</div>
 ) : (
   <RoomView
     room={selectedRoom}
