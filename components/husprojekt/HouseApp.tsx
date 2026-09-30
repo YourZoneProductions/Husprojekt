@@ -299,9 +299,18 @@ const totalSpent = activeProjects.reduce(
       </div>
 
       <div className="mt-8 grid grid-cols-3 gap-4">
-        <StatCard title="Aktive projekter" value="0" />
-        <StatCard title="Budget" value="0 kr." />
-        <StatCard title="Forbrugt" value="0 kr." />
+<StatCard
+  title="Aktive projekter"
+  value={activeProjects.length.toString()}
+/>
+<StatCard
+  title="Budget"
+  value={`${totalBudget.toLocaleString("da-DK")} kr.`}
+/>
+<StatCard
+  title="Forbrugt"
+  value={`${totalSpent.toLocaleString("da-DK")} kr.`}
+/>
       </div>
 
       <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
