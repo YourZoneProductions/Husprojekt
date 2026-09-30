@@ -54,6 +54,8 @@ export default function HouseApp({
   const [showNewProject, setShowNewProject] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [localProjects, setLocalProjects] = useState<Project[]>(projects);
+  const [showNewSubtask, setShowNewSubtask] = useState(false);
+  const [newSubtaskName, setNewSubtaskName] = useState("");
 
   const [openFloors, setOpenFloors] = useState<string[]>(
     floors.length > 0 ? [floors[0].id] : []
@@ -102,6 +104,41 @@ function handleSubtaskUpdated(
       : currentProject
   );
 }
+ async function handleCreateSubtask() {
+  if (!selectedProject) return;
+
+  const name = newSubtaskName.trim();
+
+  if (!name) return;
+const supabase = createClient();
+
+const { data, error } = await supabase
+  .from("subtasks")
+  .insert({
+    project_id: selectedProject.id,
+    name: name,
+  })
+  .select()
+  .single();
+
+if (error) {
+  console.error("Kunne ikke oprette delopgave:", error);
+  return;
+}
+
+console.log("Ny delopgave oprettet:", data);
+setSelectedProject((currentProject) =>
+  currentProject
+    ? {
+        ...currentProject,
+        subtasks: [...currentProject.subtasks, data],
+      }
+    : currentProject
+);
+setNewSubtaskName("");
+setShowNewSubtask(false);
+}
+
   function showOverview() {
     setSelectedRoom(null);
   }
@@ -325,11 +362,55 @@ function handleSubtaskUpdated(
   </section>
 
 <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
-  <p className="text-sm text-slate-500">Delopgaver</p>
-  <h3 className="text-xl font-semibold text-slate-900">
-    Projektets delopgaver
-  </h3>
+  <div className="flex items-center justify-between">
+  <div>
+    <p className="text-sm text-slate-500">Delopgaver</p>
+    <h3 className="text-xl font-semibold text-slate-900">
+      Projektets delopgaver
+    </h3>
+  </div>
 
+  <button
+    type="button"
+    onClick={() => setShowNewSubtask(true)}
+    className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
+  >
+    + Ny delopgave
+  </button>
+</div>
+{showNewSubtask && (
+  <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
+    <p className="font-medium text-slate-900">
+      Ny delopgave
+    </p>
+
+    <input
+      type="text"
+      value={newSubtaskName}
+      onChange={(event) => setNewSubtaskName(event.target.value)}
+      placeholder="Navn på delopgave"
+      className="mt-3 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+    />
+
+    <div className="mt-3 flex justify-end gap-2">
+      <button
+        type="button"
+        onClick={() => setShowNewSubtask(false)}
+        className="rounded-lg border border-slate-300 px-4 py-2 text-sm"
+      >
+        Annuller
+      </button>
+
+      <button
+        type="button"
+        onClick={handleCreateSubtask}
+        className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white"
+      >
+        Opret delopgave
+      </button>
+    </div>
+  </div>
+)}
   <div className="mt-5 space-y-3">
     {selectedProject.subtasks.map((subtask) => (
       <div
