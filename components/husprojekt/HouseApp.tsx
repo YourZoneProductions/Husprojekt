@@ -301,10 +301,23 @@ function handleProjectCreated() {
         key={subtask.id}
         className="rounded-xl border border-slate-200 p-4"
       >
-        <p className="font-medium text-slate-900">{subtask.name}</p>
-        <p className="mt-1 text-sm text-slate-500">
-          {subtask.status === "todo" ? "Ikke startet" : subtask.status}
-        </p>
+        <div className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            checked={subtask.status === "done"}
+            readOnly
+            className="mt-1 h-4 w-4"
+          />
+
+          <div>
+            <p className="font-medium text-slate-900">
+              {subtask.name}
+            </p>
+            <p className="mt-1 text-sm text-slate-500">
+              {subtask.status === "todo" ? "Ikke startet" : "Færdig"}
+            </p>
+          </div>
+        </div>
       </div>
     ))}
   </div>
