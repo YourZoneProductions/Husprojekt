@@ -58,6 +58,7 @@ export default function HouseApp({
   const [newSubtaskName, setNewSubtaskName] = useState("");
   const [editingSubtaskId, setEditingSubtaskId] = useState<string | null>(null);
   const [editingSubtaskName, setEditingSubtaskName] = useState("");
+  const [deletingSubtaskId, setDeletingSubtaskId] = useState<string | null>(null);
 
   const [openFloors, setOpenFloors] = useState<string[]>(
     floors.length > 0 ? [floors[0].id] : []
@@ -175,6 +176,34 @@ setSelectedProject((currentProject) =>
     : currentProject
 );
 setEditingSubtaskId(null);
+}
+async function handleDeleteSubtask(
+  subtaskId: string
+) {
+  const supabase = createClient();
+
+  const { error } = await supabase
+    .from("subtasks")
+    .delete()
+    .eq("id", subtaskId);
+
+  if (error) {
+    console.error("Kunne ikke slette delopgave:", error);
+    return;
+  }
+
+setSelectedProject((currentProject) =>
+  currentProject
+    ? {
+        ...currentProject,
+        subtasks: currentProject.subtasks.filter(
+          (subtask) => subtask.id !== subtaskId
+        ),
+      }
+    : currentProject
+);
+
+setDeletingSubtaskId(null);
 }
   function showOverview() {
     setSelectedRoom(null);
@@ -525,16 +554,53 @@ setEditingSubtaskId(null);
           </button>
         </div>
       ) : (
-        <button
-          type="button"
-          onClick={() => {
-            setEditingSubtaskId(subtask.id);
-            setEditingSubtaskName(subtask.name);
-          }}
-          className="ml-auto text-sm font-medium text-slate-500 hover:text-slate-900"
-        >
-          Rediger
-        </button>
+      <>
+        <div className="ml-auto flex gap-3">
+  <button
+    type="button"
+    onClick={() => {
+      setEditingSubtaskId(subtask.id);
+      setEditingSubtaskName(subtask.name);
+    }}
+    className="text-sm font-medium text-slate-500 hover:text-slate-900"
+  >
+    Rediger
+  </button>
+
+  <button
+    type="button"
+    onClick={() => setDeletingSubtaskId(subtask.id)}
+    className="text-sm font-medium text-slate-500 hover:text-slate-900"
+  >
+    Slet
+  </button>
+</div>
+{deletingSubtaskId === subtask.id && (
+  <div className="mt-3 text-sm">
+    <p className="text-slate-600">
+      Er du sikker på, at du vil slette denne delopgave?
+    </p>
+
+    <div className="mt-2 flex gap-3">
+      <button
+        type="button"
+        onClick={() => handleDeleteSubtask(subtask.id)}
+        className="font-medium text-slate-900"
+      >
+        Ja, slet
+      </button>
+
+      <button
+        type="button"
+        onClick={() => setDeletingSubtaskId(null)}
+        className="text-slate-500 hover:text-slate-900"
+      >
+        Annuller
+      </button>
+    </div>
+  </div>
+)}
+</>
       )}
     </div>
   </div>
