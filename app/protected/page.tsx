@@ -67,8 +67,17 @@ const { data: projects, error: projectsError } = await supabase
     expected_start,
     expected_end,
     project_rooms (
-      room_id
-    )
+  room_id
+),
+subtasks (
+  id,
+  name,
+  description,
+  status,
+  budget,
+  actual_cost,
+  sort_order
+)
   `)
   .eq("house_id", house.id);
 

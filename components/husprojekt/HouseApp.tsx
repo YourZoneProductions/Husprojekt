@@ -26,6 +26,15 @@ type Project = {
   project_rooms: {
     room_id: string;
   }[];
+  subtasks: {
+    id: string;
+    name: string;
+    description: string | null;
+    status: string;
+    budget: number | null;
+    actual_cost: number | null;
+    sort_order: number;
+  }[];
 };
 type HouseAppProps = {
   floors: Floor[];
@@ -117,7 +126,10 @@ function handleProjectCreated() {
                         return (
                           <button
                             key={room.id}
-                            onClick={() => setSelectedRoom(room)}
+                            onClick={() => {
+  setSelectedRoom(room);
+  setSelectedProject(null);
+}}
                             className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm ${
                               active
                                 ? "bg-slate-200 font-medium text-slate-900"
@@ -276,6 +288,27 @@ function handleProjectCreated() {
       </div>
     </div>
   </section>
+
+<section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
+  <p className="text-sm text-slate-500">Delopgaver</p>
+  <h3 className="text-xl font-semibold text-slate-900">
+    Projektets delopgaver
+  </h3>
+
+  <div className="mt-5 space-y-3">
+    {selectedProject.subtasks.map((subtask) => (
+      <div
+        key={subtask.id}
+        className="rounded-xl border border-slate-200 p-4"
+      >
+        <p className="font-medium text-slate-900">{subtask.name}</p>
+        <p className="mt-1 text-sm text-slate-500">
+          {subtask.status === "todo" ? "Ikke startet" : subtask.status}
+        </p>
+      </div>
+    ))}
+  </div>
+</section>
 </div>
 ) : (
   <RoomView
