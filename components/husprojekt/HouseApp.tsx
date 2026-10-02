@@ -60,6 +60,7 @@ export default function HouseApp({
   const [editingSubtaskName, setEditingSubtaskName] = useState("");
   const [deletingSubtaskId, setDeletingSubtaskId] = useState<string | null>(null);
   const [editingSubtaskBudget, setEditingSubtaskBudget] = useState("");
+  const [editingSubtaskActualCost, setEditingSubtaskActualCost] = useState("");
 
   const [openFloors, setOpenFloors] = useState<string[]>(
     floors.length > 0 ? [floors[0].id] : []
@@ -160,6 +161,7 @@ async function handleUpdateSubtask(
     .update({
   name: name,
   budget: Number(editingSubtaskBudget) || 0,
+  actual_cost: Number(editingSubtaskActualCost) || 0,
 })
     .eq("id", subtaskId);
 
@@ -177,6 +179,7 @@ setSelectedProject((currentProject) =>
     ...subtask,
     name: name,
     budget: Number(editingSubtaskBudget) || 0,
+    actual_cost: Number(editingSubtaskActualCost) || 0,
   }
             : subtask
         ),
@@ -561,9 +564,24 @@ setDeletingSubtaskId(null);
   </span>
 )}
 
+  {editingSubtaskId === subtask.id ? (
+  <span className="flex items-center gap-2">
+    Faktisk:
+    <input
+      type="number"
+      value={editingSubtaskActualCost}
+      onChange={(event) =>
+        setEditingSubtaskActualCost(event.target.value)
+      }
+      className="w-24 rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm"
+    />
+    kr.
+  </span>
+) : (
   <span>
     Faktisk: {(subtask.actual_cost ?? 0).toLocaleString("da-DK")} kr.
   </span>
+)}
 </div>
       </div>
 
@@ -594,6 +612,7 @@ setDeletingSubtaskId(null);
       setEditingSubtaskId(subtask.id);
       setEditingSubtaskName(subtask.name);
       setEditingSubtaskBudget(String(subtask.budget ?? 0));
+      setEditingSubtaskActualCost(String(subtask.actual_cost ?? 0));
     }}
     className="text-sm font-medium text-slate-500 hover:text-slate-900"
   >
