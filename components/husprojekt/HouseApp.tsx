@@ -219,6 +219,20 @@ setDeletingSubtaskId(null);
   function showOverview() {
     setSelectedRoom(null);
   }
+const subtaskBudgetTotal =
+  selectedProject?.subtasks.reduce(
+    (sum, subtask) => sum + (subtask.budget ?? 0),
+    0
+  ) ?? 0;
+
+const unallocatedBudget =
+  (selectedProject?.budget ?? 0) - subtaskBudgetTotal;
+
+const subtaskActualTotal =
+  selectedProject?.subtasks.reduce(
+    (sum, subtask) => sum + (subtask.actual_cost ?? 0),
+    0
+  ) ?? 0;
 
   return (
     <div className="flex min-h-[calc(100vh-73px)]">
@@ -410,14 +424,25 @@ setDeletingSubtaskId(null);
     />
     <StatCard
       title="Forbrugt"
-      value={`${(selectedProject.actual_cost ?? 0).toLocaleString("da-DK")} kr.`}
+      value={`${subtaskActualTotal.toLocaleString("da-DK")} kr.`}
     />
     <StatCard
       title="Tilbage"
-      value={`${((selectedProject.budget ?? 0) - (selectedProject.actual_cost ?? 0)).toLocaleString("da-DK")} kr.`}
+      value={`${((selectedProject.budget ?? 0) - subtaskActualTotal).toLocaleString("da-DK")} kr.`}
     />
   </div>
-
+<p className="mt-3 text-sm text-slate-500">
+  Budget på delopgaver:{" "}
+  <span className="font-medium text-slate-900">
+    {subtaskBudgetTotal.toLocaleString("da-DK")} kr.
+  </span>
+</p>
+<p className="mt-1 text-sm text-slate-500">
+  Ikke fordelt:{" "}
+  <span className="font-medium text-slate-900">
+    {unallocatedBudget.toLocaleString("da-DK")} kr.
+  </span>
+</p>
   <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
     <p className="text-sm text-slate-500">Tidsplan</p>
 
