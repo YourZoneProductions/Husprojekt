@@ -237,6 +237,19 @@ const subtaskActualTotal =
 const remainingBudget =
   (selectedProject?.budget ?? 0) - subtaskActualTotal;
 
+const completedSubtasks =
+  selectedProject?.subtasks.filter(
+    (subtask) => subtask.status === "completed"
+  ).length ?? 0;
+
+const totalSubtasks =
+  selectedProject?.subtasks.length ?? 0;
+
+const progressPercent =
+  totalSubtasks > 0
+    ? Math.round((completedSubtasks / totalSubtasks) * 100)
+    : 0;
+
   return (
     <div className="flex min-h-[calc(100vh-73px)]">
 
@@ -476,6 +489,23 @@ const remainingBudget =
   <div className="flex items-center justify-between">
   <div>
     <p className="text-sm text-slate-500">Delopgaver</p>
+    <div className="mb-4">
+  <p className="text-sm text-slate-500">
+    Fremdrift:{" "}
+    <span className="font-medium text-slate-900">
+      {completedSubtasks} af {totalSubtasks} delopgaver færdige ·{" "}
+      {progressPercent} %
+    </span>
+  </p>
+
+<div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200">
+  <div
+    className="h-full rounded-full bg-slate-900 transition-all"
+    style={{ width: `${progressPercent}%` }}
+  />
+</div>
+
+</div>
     <h3 className="text-xl font-semibold text-slate-900">
       Projektets delopgaver
     </h3>
