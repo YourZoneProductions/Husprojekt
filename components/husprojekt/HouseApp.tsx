@@ -59,6 +59,7 @@ export default function HouseApp({
   const [editingSubtaskId, setEditingSubtaskId] = useState<string | null>(null);
   const [editingSubtaskName, setEditingSubtaskName] = useState("");
   const [deletingSubtaskId, setDeletingSubtaskId] = useState<string | null>(null);
+  const [editingSubtaskBudget, setEditingSubtaskBudget] = useState("");
 
   const [openFloors, setOpenFloors] = useState<string[]>(
     floors.length > 0 ? [floors[0].id] : []
@@ -156,7 +157,10 @@ async function handleUpdateSubtask(
 
   const { error } = await supabase
     .from("subtasks")
-    .update({ name: name })
+    .update({
+  name: name,
+  budget: Number(editingSubtaskBudget) || 0,
+})
     .eq("id", subtaskId);
 
   if (error) {
@@ -169,7 +173,11 @@ setSelectedProject((currentProject) =>
         ...currentProject,
         subtasks: currentProject.subtasks.map((subtask) =>
           subtask.id === subtaskId
-            ? { ...subtask, name: name }
+            ? {
+    ...subtask,
+    name: name,
+    budget: Number(editingSubtaskBudget) || 0,
+  }
             : subtask
         ),
       }
@@ -533,6 +541,30 @@ setDeletingSubtaskId(null);
         <p className="mt-1 text-sm text-slate-500">
           {subtask.status === "todo" ? "Ikke startet" : "Færdig"}
         </p>
+<div className="mt-2 flex gap-4 text-sm text-slate-500">
+  {editingSubtaskId === subtask.id ? (
+  <span className="flex items-center gap-2">
+    Budget:
+    <input
+      type="number"
+      value={editingSubtaskBudget}
+      onChange={(event) =>
+        setEditingSubtaskBudget(event.target.value)
+      }
+      className="w-24 rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm"
+    />
+    kr.
+  </span>
+) : (
+  <span>
+    Budget: {(subtask.budget ?? 0).toLocaleString("da-DK")} kr.
+  </span>
+)}
+
+  <span>
+    Faktisk: {(subtask.actual_cost ?? 0).toLocaleString("da-DK")} kr.
+  </span>
+</div>
       </div>
 
       {editingSubtaskId === subtask.id ? (
@@ -561,6 +593,7 @@ setDeletingSubtaskId(null);
     onClick={() => {
       setEditingSubtaskId(subtask.id);
       setEditingSubtaskName(subtask.name);
+      setEditingSubtaskBudget(String(subtask.budget ?? 0));
     }}
     className="text-sm font-medium text-slate-500 hover:text-slate-900"
   >
@@ -744,6 +777,7 @@ const totalSpent = activeProjects.reduce(
               <p className="mt-1 text-sm text-slate-500">
                 {project.status === "active" ? "Aktiv" : project.status}
               </p>
+
             </div>
 
             <p className="font-semibold text-slate-900">
