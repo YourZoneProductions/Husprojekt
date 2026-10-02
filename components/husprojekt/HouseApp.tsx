@@ -234,6 +234,9 @@ const subtaskActualTotal =
     0
   ) ?? 0;
 
+const remainingBudget =
+  (selectedProject?.budget ?? 0) - subtaskActualTotal;
+
   return (
     <div className="flex min-h-[calc(100vh-73px)]">
 
@@ -428,7 +431,9 @@ const subtaskActualTotal =
     />
     <StatCard
       title="Tilbage"
-      value={`${((selectedProject.budget ?? 0) - subtaskActualTotal).toLocaleString("da-DK")} kr.`}
+      title={remainingBudget >= 0 ? "Tilbage" : "Over budget total"}
+      value={`${Math.abs(remainingBudget).toLocaleString("da-DK")} kr.`}
+      danger={remainingBudget < 0}
     />
   </div>
 <p className="mt-3 text-sm text-slate-500">
@@ -438,9 +443,13 @@ const subtaskActualTotal =
   </span>
 </p>
 <p className="mt-1 text-sm text-slate-500">
-  Ikke fordelt:{" "}
-  <span className="font-medium text-slate-900">
-    {unallocatedBudget.toLocaleString("da-DK")} kr.
+  {unallocatedBudget >= 0 ? "Ikke fordelt: " : "Over budget: "}
+  <span
+  className={`font-medium ${
+    unallocatedBudget < 0 ? "text-red-600" : "text-slate-900"
+  }`}
+>
+    {Math.abs(unallocatedBudget).toLocaleString("da-DK")} kr.
   </span>
 </p>
   <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
@@ -855,14 +864,22 @@ const totalSpent = activeProjects.reduce(
 function StatCard({
   title,
   value,
+  danger = false,
 }: {
   title: string;
   value: string;
+  danger?: boolean;
 }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5">
       <p className="text-sm text-slate-500">{title}</p>
-      <p className="mt-2 text-3xl font-bold text-slate-900">{value}</p>
+      <p
+  className={`mt-2 text-3xl font-bold ${
+    danger ? "text-red-600" : "text-slate-900"
+  }`}
+>
+  {value}
+</p>
     </div>
   );
 }
