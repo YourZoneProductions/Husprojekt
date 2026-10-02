@@ -76,7 +76,8 @@ subtasks (
   status,
   budget,
   actual_cost,
-  sort_order
+  sort_order,
+  due_date
 )
   `)
   .eq("house_id", house.id);

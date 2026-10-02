@@ -35,6 +35,7 @@ type Project = {
     budget: number | null;
     actual_cost: number | null;
     sort_order: number;
+    due_date: string | null;
   }[];
 };
 type HouseAppProps = {
@@ -61,6 +62,7 @@ export default function HouseApp({
   const [deletingSubtaskId, setDeletingSubtaskId] = useState<string | null>(null);
   const [editingSubtaskBudget, setEditingSubtaskBudget] = useState("");
   const [editingSubtaskActualCost, setEditingSubtaskActualCost] = useState("");
+  const [editingSubtaskDueDate, setEditingSubtaskDueDate] = useState("");
 
   const [openFloors, setOpenFloors] = useState<string[]>(
     floors.length > 0 ? [floors[0].id] : []
@@ -162,6 +164,7 @@ async function handleUpdateSubtask(
   name: name,
   budget: Number(editingSubtaskBudget) || 0,
   actual_cost: Number(editingSubtaskActualCost) || 0,
+  due_date: editingSubtaskDueDate || null,
 })
     .eq("id", subtaskId);
 
@@ -180,6 +183,7 @@ setSelectedProject((currentProject) =>
     name: name,
     budget: Number(editingSubtaskBudget) || 0,
     actual_cost: Number(editingSubtaskActualCost) || 0,
+    due_date: editingSubtaskDueDate || null,
   }
             : subtask
         ),
@@ -646,6 +650,26 @@ const progressPercent =
     Faktisk: {(subtask.actual_cost ?? 0).toLocaleString("da-DK")} kr.
   </span>
 )}
+{editingSubtaskId === subtask.id ? (
+  <span className="flex items-center gap-2">
+    Deadline:
+    <input
+      type="date"
+      value={editingSubtaskDueDate}
+      onChange={(event) =>
+        setEditingSubtaskDueDate(event.target.value)
+      }
+      className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm"
+    />
+  </span>
+) : (
+  <span>
+    Deadline:{" "}
+{subtask.due_date
+  ? new Date(`${subtask.due_date}T00:00:00`).toLocaleDateString("da-DK")
+  : "Ingen"}
+  </span>
+)}
 </div>
       </div>
 
@@ -677,6 +701,7 @@ const progressPercent =
       setEditingSubtaskName(subtask.name);
       setEditingSubtaskBudget(String(subtask.budget ?? 0));
       setEditingSubtaskActualCost(String(subtask.actual_cost ?? 0));
+      setEditingSubtaskDueDate(subtask.due_date ?? "");
     }}
     className="text-sm font-medium text-slate-500 hover:text-slate-900"
   >
