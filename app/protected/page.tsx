@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import HouseApp from "@/components/husprojekt/HouseApp";
+import { LogoutButton } from "@/components/logout-button";
 
 export default async function ProtectedPage() {
   const supabase = await createClient();
@@ -112,8 +113,9 @@ if (projectsError) {
             </p>
           </div>
 
-          <div className="text-xs text-slate-500">
-            {user.email}
+          <div className="flex flex-wrap items-center justify-end gap-3 text-xs text-slate-500">
+            <span className="break-all">{user.email}</span>
+            <LogoutButton />
           </div>
         </div>
       </header>

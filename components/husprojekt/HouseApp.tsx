@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import NewProjectForm from "./NewProjectForm";
+import ProjectEditor from "./ProjectEditor";
 
 type Room = {
   id: string;
@@ -16,7 +17,7 @@ type Floor = {
   name: string;
   rooms: Room[];
 };
-type Project = {
+export type Project = {
   id: string;
   name: string;
   status: string;
@@ -51,6 +52,10 @@ export default function HouseApp({
 }: HouseAppProps) {
   const router = useRouter();
 
+  const [errorMessage, setErrorMessage] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [editingProject, setEditingProject] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(true);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [showNewProject, setShowNewProject] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -106,104 +111,92 @@ export default function HouseApp({
 function handleProjectCreated() {
   router.refresh();
 }
-function handleSubtaskUpdated(
-  projectId: string,
-  subtaskId: string,
-  newStatus: string
-) {
-  updateSubtasks(projectId, (subtasks) => subtasks.map((subtask) =>
-    subtask.id === subtaskId ? { ...subtask, status: newStatus } : subtask
-  ));
-}
-
- async function handleCreateSubtask() {
-  if (!selectedProject) return;
-
-  const name = newSubtaskName.trim();
-
-  if (!name) return;
-
-  const supabase = createClient();
-
-  const { data, error } = await supabase
-    .from("subtasks")
-    .insert({
-      project_id: selectedProject.id,
-      name: name,
-    })
-    .select()
-    .single();
-
-  if (error) {
-    console.error("Kunne ikke oprette delopgave:", error);
-    return;
-  }
-
-  updateSubtasks(selectedProject.id, (subtasks) => [...subtasks, data]);
-
-  setNewSubtaskName("");
+function openProject(projectId: string) {
+  setSelectedProjectId(projectId);
+  setEditingProject(false);
   setShowNewSubtask(false);
+  setEditingSubtaskId(null);
+  setDeletingSubtaskId(null);
+  setErrorMessage("");
 }
 
-async function handleUpdateSubtask(
-  subtaskId: string
-) {
+async function changeSubtask(action: () => Promise<void>) {
+  if (saving) return;
+  setSaving(true);
+  setErrorMessage("");
+  try {
+    await action();
+  } catch {
+    setErrorMessage("Ændringen kunne ikke gemmes. Kontrollér forbindelsen, og prøv igen. Dine data er ikke ændret i oversigten.");
+  } finally {
+    setSaving(false);
+  }
+}
+
+async function handleCreateSubtask() {
+  const projectId = selectedProject?.id;
+  const name = newSubtaskName.trim();
+  if (!projectId) return;
+  if (!name) return setErrorMessage("Skriv et navn til delopgaven.");
+  await changeSubtask(async () => {
+    const { data, error } = await createClient().from("subtasks")
+      .insert({ project_id: projectId, name }).select().single();
+    if (error || !data) throw error ?? new Error("Delopgaven blev ikke oprettet.");
+    updateSubtasks(projectId, subtasks => [...subtasks, data]);
+    setNewSubtaskName("");
+    setShowNewSubtask(false);
+  });
+}
+
+async function handleUpdateSubtask(subtaskId: string) {
+  const projectId = selectedProject?.id;
   const name = editingSubtaskName.trim();
-
-  if (!name || !selectedProject) return;
-
-  const supabase = createClient();
-
-  const { error } = await supabase
-    .from("subtasks")
-    .update({
-  name: name,
-  budget: Number(editingSubtaskBudget) || 0,
-  actual_cost: Number(editingSubtaskActualCost) || 0,
-  due_date: editingSubtaskDueDate || null,
-})
-    .eq("id", subtaskId);
-
-  if (error) {
-    console.error("Kunne ikke opdatere delopgave:", error);
-    return;
+  const budget = Number(editingSubtaskBudget);
+  const actual_cost = Number(editingSubtaskActualCost);
+  if (!projectId) return;
+  if (!name) return setErrorMessage("Skriv et navn til delopgaven.");
+  if (![budget, actual_cost].every(value => Number.isFinite(value) && value >= 0)) {
+    return setErrorMessage("Budget og forbrug skal være positive beløb eller nul.");
   }
-updateSubtasks(selectedProject.id, (subtasks) => subtasks.map((subtask) =>
-  subtask.id === subtaskId ? {
-    ...subtask,
-    name,
-    budget: Number(editingSubtaskBudget) || 0,
-    actual_cost: Number(editingSubtaskActualCost) || 0,
-    due_date: editingSubtaskDueDate || null,
-  } : subtask
-));
-setEditingSubtaskId(null);
+  await changeSubtask(async () => {
+    const { data, error } = await createClient().from("subtasks").update({
+      name, budget, actual_cost, due_date: editingSubtaskDueDate || null,
+    }).eq("id", subtaskId).select().single();
+    if (error || !data) throw error ?? new Error("Delopgaven blev ikke gemt.");
+    updateSubtasks(projectId, subtasks => subtasks.map(subtask => subtask.id === subtaskId ? data : subtask));
+    setEditingSubtaskId(null);
+  });
 }
-async function handleDeleteSubtask(
-  subtaskId: string
-) {
-  if (!selectedProject) return;
 
-  const supabase = createClient();
+async function handleDeleteSubtask(subtaskId: string) {
+  const projectId = selectedProject?.id;
+  if (!projectId) return;
+  await changeSubtask(async () => {
+    const { data, error } = await createClient().from("subtasks")
+      .delete().eq("id", subtaskId).select("id");
+    if (error || !data?.length) throw error ?? new Error("Delopgaven blev ikke slettet.");
+    updateSubtasks(projectId, subtasks => subtasks.filter(subtask => subtask.id !== subtaskId));
+    setDeletingSubtaskId(null);
+  });
+}
 
-  const { error } = await supabase
-    .from("subtasks")
-    .delete()
-    .eq("id", subtaskId);
-
-  if (error) {
-    console.error("Kunne ikke slette delopgave:", error);
-    return;
-  }
-
-updateSubtasks(selectedProject.id, (subtasks) => subtasks.filter((subtask) => subtask.id !== subtaskId));
-
-setDeletingSubtaskId(null);
+async function handleToggleSubtask(subtask: Project["subtasks"][number]) {
+  const projectId = selectedProject?.id;
+  if (!projectId) return;
+  await changeSubtask(async () => {
+    const status = subtask.status === "completed" ? "todo" : "completed";
+    const { data, error } = await createClient().from("subtasks")
+      .update({ status }).eq("id", subtask.id).select().single();
+    if (error || !data) throw error ?? new Error("Delopgaven blev ikke gemt.");
+    updateSubtasks(projectId, subtasks => subtasks.map(current => current.id === subtask.id ? data : current));
+  });
 }
   function showOverview() {
     setSelectedRoom(null);
     setSelectedProjectId(null);
     setShowNewProject(false);
+    setEditingProject(false);
+    setErrorMessage("");
   }
 const subtaskBudgetTotal =
   selectedProject?.subtasks.reduce(
@@ -232,7 +225,7 @@ const progressPercent =
     ? Math.round((completedSubtasks / totalSubtasks) * 100)
     : 0;
 
-const today = new Date().toISOString().split("T")[0];
+const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Copenhagen" }).format(new Date());
 
 const overdueSubtasks =
   selectedProject?.subtasks.filter(
@@ -243,10 +236,13 @@ const overdueSubtasks =
   ).length ?? 0;
 
   return (
-    <div className="flex min-h-[calc(100vh-73px)]">
+    <div className="flex min-h-[calc(100vh-73px)] flex-col md:flex-row">
+      <button type="button" onClick={() => setMenuOpen(open => !open)} aria-expanded={menuOpen} aria-controls="room-menu" className="m-4 rounded-lg border border-slate-300 bg-white px-4 py-3 text-left text-sm font-medium md:hidden">
+        {menuOpen ? "Skjul rum og etager" : "Vis rum og etager"}
+      </button>
 
       {/* SIDEBAR */}
-      <aside className="w-72 shrink-0 border-r border-slate-200 bg-white p-5">
+      <aside id="room-menu" className={`${menuOpen ? "block" : "hidden"} w-full shrink-0 border-b border-slate-200 bg-white p-4 md:block md:w-64 md:border-b-0 md:border-r lg:w-72`}>
 
         <button
           onClick={showOverview}
@@ -299,7 +295,8 @@ const overdueSubtasks =
                             key={room.id}
                             onClick={() => {
   setSelectedRoom(room);
-  setSelectedProjectId(null);
+  openProject("");
+  setShowNewProject(false);
 }}
                             className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm ${
                               active
@@ -307,10 +304,13 @@ const overdueSubtasks =
                                 : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                             }`}
                           >
-                            <span>{room.name}</span>
+                            <span className="min-w-0 break-words">{room.name}</span>
+                            <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600" aria-label="Aktive projekter">
+                              {localProjects.filter(project => project.status === "active" && project.project_rooms.some(link => link.room_id === room.id)).length}
+                            </span>
 
                             {room.area_m2 !== null && (
-                              <span className="text-xs text-slate-400">
+                              <span className="ml-2 shrink-0 text-xs text-slate-400">
                                 {room.area_m2.toLocaleString("da-DK")} m²
                               </span>
                             )}
@@ -328,13 +328,15 @@ const overdueSubtasks =
       </aside>
 
       {/* INDHOLD */}
-      <main className="flex-1 bg-slate-50 p-8">
+      <main className="min-w-0 flex-1 bg-slate-50 p-4 sm:p-6 lg:p-8" aria-busy={saving}>
+        {errorMessage && <p role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{errorMessage}</p>}
+        {saving && <p role="status" className="mb-4 text-sm text-slate-600">Gemmer ændringen…</p>}
 
         {selectedRoom === null && selectedProject === null ? (
           <>
             <p className="text-sm text-slate-500">Overblik</p>
 
-            <h2 className="text-3xl font-bold text-slate-900">
+            <h2 className="break-words text-2xl font-bold text-slate-900 sm:text-3xl">
               Velkommen til Husprojekt
             </h2>
 
@@ -342,7 +344,7 @@ const overdueSubtasks =
               Her får du samlet overblik over husets projekter, økonomi og tidsplan.
             </p>
 
-            <div className="mt-8 grid grid-cols-4 gap-4">
+            <div className="mt-8 grid grid-cols-2 gap-3 xl:grid-cols-4">
 <StatCard
   title="Aktive projekter"
   value={String(activeProjects.length)}
@@ -368,7 +370,7 @@ const overdueSubtasks =
               />
             </div>
 
-            <div className="mt-6 grid grid-cols-2 gap-6">
+            <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
 
               <section className="rounded-xl border border-slate-200 bg-white p-6">
                 <p className="text-sm text-slate-500">Huset</p>
@@ -399,7 +401,7 @@ const overdueSubtasks =
                   ) : activeProjects.map((project) => (
                     <button
                       key={project.id}
-                      onClick={() => setSelectedProjectId(project.id)}
+                      onClick={() => openProject(project.id)}
                       className="flex w-full items-center justify-between gap-4 rounded-xl border border-slate-200 p-4 text-left hover:bg-slate-50"
                     >
                       <span className="font-medium text-slate-900">{project.name}</span>
@@ -414,7 +416,7 @@ const overdueSubtasks =
 ) : selectedProject !== null ? (
   <div>
   <button
-    onClick={() => setSelectedProjectId(null)}
+    onClick={() => { setSelectedProjectId(null); setEditingProject(false); setErrorMessage(""); }}
     className="mb-6 text-sm font-medium text-slate-600 hover:text-slate-900"
   >
     ← Tilbage til {selectedRoom?.name ?? "overblik"}
@@ -422,18 +424,24 @@ const overdueSubtasks =
 
   <p className="text-sm text-slate-500">Projekt</p>
 
-  <div className="mt-1 flex items-center justify-between">
+  <div className="mt-1 flex flex-wrap items-center justify-between gap-4">
     <div>
-      <h2 className="text-3xl font-bold text-slate-900">
+      <h2 className="break-words text-2xl font-bold text-slate-900 sm:text-3xl">
         {selectedProject.name}
       </h2>
       <p className="mt-2 text-sm text-slate-500">
-        Status: {selectedProject.status === "active" ? "Aktiv" : selectedProject.status}
+        Status: {projectStatus(selectedProject.status)}
       </p>
     </div>
   </div>
 
-  <div className="mt-8 grid grid-cols-3 gap-4">
+  <button type="button" onClick={() => setEditingProject(open => !open)} className="mt-4 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700">Rediger projekt</button>
+  {editingProject && <ProjectEditor key={selectedProject.id} project={selectedProject} onCancel={() => setEditingProject(false)} onSaved={details => {
+    setLocalProjects(current => current.map(project => project.id === details.id ? { ...project, ...details } : project));
+    setEditingProject(false);
+  }} />}
+
+  <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
     <StatCard
       title="Budget"
       value={`${(selectedProject.budget ?? 0).toLocaleString("da-DK")} kr.`}
@@ -467,7 +475,7 @@ const overdueSubtasks =
   <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
     <p className="text-sm text-slate-500">Tidsplan</p>
 
-    <div className="mt-4 grid grid-cols-2 gap-6">
+    <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-2">
       <div>
         <p className="text-sm text-slate-500">Startdato</p>
         <p className="mt-1 font-medium text-slate-900">
@@ -485,7 +493,7 @@ const overdueSubtasks =
   </section>
 
 <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
-  <div className="flex items-center justify-between">
+  <div className="flex flex-wrap items-center justify-between gap-4">
   <div>
     <p className="text-sm text-slate-500">Delopgaver</p>
     <div className="mb-4">
@@ -552,6 +560,7 @@ const overdueSubtasks =
 
       <button
         type="button"
+        disabled={saving}
         onClick={handleCreateSubtask}
         className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white"
       >
@@ -566,38 +575,16 @@ const overdueSubtasks =
     key={subtask.id}
     className="rounded-xl border border-slate-200 p-4"
   >
-    <div className="flex items-start gap-3">
+    <div className="flex flex-wrap items-start gap-3">
       <input
         type="checkbox"
         checked={subtask.status === "completed"}
-        onChange={async () => {
-          const supabase = createClient();
-
-          const newStatus =
-            subtask.status === "completed" ? "todo" : "completed";
-
-          const { error } = await supabase
-            .from("subtasks")
-            .update({ status: newStatus })
-            .eq("id", subtask.id);
-
-          if (error) {
-            alert(
-              `Supabase fejl:\n${error.message}\nKode: ${error.code}\nDetaljer: ${error.details ?? "ingen"}`
-            );
-            return;
-          }
-
-          handleSubtaskUpdated(
-            selectedProject.id,
-            subtask.id,
-            newStatus
-          );
-        }}
+        disabled={saving}
+        onChange={() => handleToggleSubtask(subtask)}
         className="mt-1 h-4 w-4"
       />
 
-      <div>
+      <div className="min-w-0 flex-1 basis-48">
         {editingSubtaskId === subtask.id ? (
           <input
             type="text"
@@ -616,12 +603,14 @@ const overdueSubtasks =
         <p className="mt-1 text-sm text-slate-500">
           {subtask.status === "todo" ? "Ikke startet" : "Færdig"}
         </p>
-<div className="mt-2 flex gap-4 text-sm text-slate-500">
+<div className="mt-2 flex flex-wrap gap-4 text-sm text-slate-500">
   {editingSubtaskId === subtask.id ? (
   <span className="flex items-center gap-2">
     Budget:
     <input
       type="number"
+      min="0"
+      step="0.01"
       value={editingSubtaskBudget}
       onChange={(event) =>
         setEditingSubtaskBudget(event.target.value)
@@ -641,6 +630,8 @@ const overdueSubtasks =
     Faktisk:
     <input
       type="number"
+      min="0"
+      step="0.01"
       value={editingSubtaskActualCost}
       onChange={(event) =>
         setEditingSubtaskActualCost(event.target.value)
@@ -693,10 +684,11 @@ const overdueSubtasks =
       </div>
 
       {editingSubtaskId === subtask.id ? (
-        <div className="ml-auto flex gap-3">
+        <div className="ml-auto flex shrink-0 flex-wrap gap-3">
           <button
             type="button"
-            onClick={() => handleUpdateSubtask(subtask.id)}
+            disabled={saving}
+        onClick={() => handleUpdateSubtask(subtask.id)}
             className="text-sm font-medium text-slate-900 hover:text-slate-600"
           >
             Gem
@@ -712,7 +704,7 @@ const overdueSubtasks =
         </div>
       ) : (
       <>
-        <div className="ml-auto flex gap-3">
+        <div className="ml-auto flex shrink-0 flex-wrap gap-3">
   <button
     type="button"
     onClick={() => {
@@ -744,6 +736,7 @@ const overdueSubtasks =
     <div className="mt-2 flex gap-3">
       <button
         type="button"
+        disabled={saving}
         onClick={() => handleDeleteSubtask(subtask.id)}
         className="font-medium text-slate-900"
       >
@@ -773,7 +766,7 @@ const overdueSubtasks =
     room={selectedRoom!}
     projects={localProjects}
     onNewProject={() => setShowNewProject(true)}
-    onProjectClick={(project) => setSelectedProjectId(project.id)}
+    onProjectClick={(project) => openProject(project.id)}
   />
 )}
 
@@ -827,9 +820,9 @@ const totalSpent = roomProjects.reduce(
     <>
       <p className="text-sm text-slate-500">Rum</p>
 
-      <div className="mt-1 flex items-end justify-between">
+      <div className="mt-1 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-slate-900">
+          <h2 className="break-words text-2xl font-bold text-slate-900 sm:text-3xl">
             {room.name}
           </h2>
 
@@ -848,7 +841,7 @@ const totalSpent = roomProjects.reduce(
 </button>
       </div>
 
-      <div className="mt-8 grid grid-cols-3 gap-4">
+      <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
 <StatCard
   title="Aktive projekter"
   value={activeProjects.length.toString()}
@@ -902,7 +895,7 @@ const totalSpent = roomProjects.reduce(
               </h4>
 
               <p className="mt-1 text-sm text-slate-500">
-                {project.status === "active" ? "Aktiv" : project.status}
+                {projectStatus(project.status)}
               </p>
 
             </div>
@@ -948,7 +941,7 @@ function StatCard({
     <div className="rounded-xl border border-slate-200 bg-white p-5">
       <p className="text-sm text-slate-500">{title}</p>
       <p
-  className={`mt-2 text-3xl font-bold ${
+  className={`mt-2 break-words text-2xl font-bold lg:text-3xl ${
     danger ? "text-red-600" : "text-slate-900"
   }`}
 >
@@ -960,4 +953,8 @@ function StatCard({
 // Use the same subtask spending in the project, room and house views.
 function projectSpent(project: Project) {
   return project.subtasks.reduce((sum, subtask) => sum + (subtask.actual_cost ?? 0), 0);
+}
+
+function projectStatus(status: string) {
+  return status === "active" ? "Aktiv" : status === "completed" ? "Afsluttet" : status;
 }
