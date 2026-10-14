@@ -8,6 +8,7 @@ import ProjectEditor from "./ProjectEditor";
 import FloorPlanPanel from "./FloorPlanPanel";
 import StructureManager from "./StructureManager";
 import ProjectTimeline from "./ProjectTimeline";
+import ProjectPhotos from "./ProjectPhotos";
 
 type Room = {
   id: string;
@@ -469,6 +470,7 @@ const overdueSubtasks =
     {Math.abs(unallocatedBudget).toLocaleString("da-DK")} kr.
   </span>
 </p>
+  <ProjectPhotos key={`photos-${selectedProject.id}`} projectId={selectedProject.id} today={today} />
   <ProjectTimeline projects={[selectedProject]} showSubtasks today={today} />
   <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
     <p className="text-sm text-slate-500">Tidsplan</p>
