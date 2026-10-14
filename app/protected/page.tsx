@@ -44,9 +44,10 @@ export default async function ProtectedPage() {
     );
   }
 
-  const house = memberships?.[0]?.houses;
+  const houses = memberships?.[0]?.houses;
+  const house = Array.isArray(houses) ? houses[0] : houses;
 
-  if (!house || Array.isArray(house)) {
+  if (!house) {
     return (
       <main className="p-8">
         <h1 className="text-2xl font-bold">HusProjekt</h1>

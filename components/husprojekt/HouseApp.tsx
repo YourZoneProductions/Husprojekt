@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import NewProjectForm from "./NewProjectForm";
@@ -53,8 +53,36 @@ export default function HouseApp({
 
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [showNewProject, setShowNewProject] = useState(false);
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [localProjects, setLocalProjects] = useState<Project[]>(projects);
+  const selectedProject =
+    localProjects.find((project) => project.id === selectedProjectId) ?? null;
+
+  useEffect(() => {
+    setLocalProjects(projects);
+  }, [projects]);
+
+  function updateSubtasks(
+    projectId: string,
+    update: (subtasks: Project["subtasks"]) => Project["subtasks"]
+  ) {
+    setLocalProjects((current) =>
+      current.map((project) =>
+        project.id === projectId
+          ? { ...project, subtasks: update(project.subtasks) }
+          : project
+      )
+    );
+  }
+
+  const activeProjects = localProjects.filter((project) => project.status === "active");
+  const totalBudget = localProjects.reduce(
+    (sum, project) => sum + (project.budget ?? 0), 0
+  );
+  const totalSpent = localProjects.reduce(
+    (sum, project) => sum + projectSpent(project), 0
+  );
+
   const [showNewSubtask, setShowNewSubtask] = useState(false);
   const [newSubtaskName, setNewSubtaskName] = useState("");
   const [editingSubtaskId, setEditingSubtaskId] = useState<string | null>(null);
@@ -83,34 +111,11 @@ function handleSubtaskUpdated(
   subtaskId: string,
   newStatus: string
 ) {
-  setLocalProjects((currentProjects) =>
-    currentProjects.map((project) =>
-      project.id === projectId
-        ? {
-            ...project,
-            subtasks: project.subtasks.map((subtask) =>
-              subtask.id === subtaskId
-                ? { ...subtask, status: newStatus }
-                : subtask
-            ),
-          }
-        : project
-    )
-  );
-
-  setSelectedProject((currentProject) =>
-    currentProject?.id === projectId
-      ? {
-          ...currentProject,
-          subtasks: currentProject.subtasks.map((subtask) =>
-            subtask.id === subtaskId
-              ? { ...subtask, status: newStatus }
-              : subtask
-          ),
-        }
-      : currentProject
-  );
+  updateSubtasks(projectId, (subtasks) => subtasks.map((subtask) =>
+    subtask.id === subtaskId ? { ...subtask, status: newStatus } : subtask
+  ));
 }
+
  async function handleCreateSubtask() {
   if (!selectedProject) return;
 
@@ -134,16 +139,7 @@ function handleSubtaskUpdated(
     return;
   }
 
-  console.log("Ny delopgave oprettet:", data);
-
-  setSelectedProject((currentProject) =>
-    currentProject
-      ? {
-          ...currentProject,
-          subtasks: [...currentProject.subtasks, data],
-        }
-      : currentProject
-  );
+  updateSubtasks(selectedProject.id, (subtasks) => [...subtasks, data]);
 
   setNewSubtaskName("");
   setShowNewSubtask(false);
@@ -154,7 +150,7 @@ async function handleUpdateSubtask(
 ) {
   const name = editingSubtaskName.trim();
 
-  if (!name) return;
+  if (!name || !selectedProject) return;
 
   const supabase = createClient();
 
@@ -172,29 +168,22 @@ async function handleUpdateSubtask(
     console.error("Kunne ikke opdatere delopgave:", error);
     return;
   }
-setSelectedProject((currentProject) =>
-  currentProject
-    ? {
-        ...currentProject,
-        subtasks: currentProject.subtasks.map((subtask) =>
-          subtask.id === subtaskId
-            ? {
+updateSubtasks(selectedProject.id, (subtasks) => subtasks.map((subtask) =>
+  subtask.id === subtaskId ? {
     ...subtask,
-    name: name,
+    name,
     budget: Number(editingSubtaskBudget) || 0,
     actual_cost: Number(editingSubtaskActualCost) || 0,
     due_date: editingSubtaskDueDate || null,
-  }
-            : subtask
-        ),
-      }
-    : currentProject
-);
+  } : subtask
+));
 setEditingSubtaskId(null);
 }
 async function handleDeleteSubtask(
   subtaskId: string
 ) {
+  if (!selectedProject) return;
+
   const supabase = createClient();
 
   const { error } = await supabase
@@ -207,21 +196,14 @@ async function handleDeleteSubtask(
     return;
   }
 
-setSelectedProject((currentProject) =>
-  currentProject
-    ? {
-        ...currentProject,
-        subtasks: currentProject.subtasks.filter(
-          (subtask) => subtask.id !== subtaskId
-        ),
-      }
-    : currentProject
-);
+updateSubtasks(selectedProject.id, (subtasks) => subtasks.filter((subtask) => subtask.id !== subtaskId));
 
 setDeletingSubtaskId(null);
 }
   function showOverview() {
     setSelectedRoom(null);
+    setSelectedProjectId(null);
+    setShowNewProject(false);
   }
 const subtaskBudgetTotal =
   selectedProject?.subtasks.reduce(
@@ -232,11 +214,7 @@ const subtaskBudgetTotal =
 const unallocatedBudget =
   (selectedProject?.budget ?? 0) - subtaskBudgetTotal;
 
-const subtaskActualTotal =
-  selectedProject?.subtasks.reduce(
-    (sum, subtask) => sum + (subtask.actual_cost ?? 0),
-    0
-  ) ?? 0;
+const subtaskActualTotal = selectedProject ? projectSpent(selectedProject) : 0;
 
 const remainingBudget =
   (selectedProject?.budget ?? 0) - subtaskActualTotal;
@@ -321,7 +299,7 @@ const overdueSubtasks =
                             key={room.id}
                             onClick={() => {
   setSelectedRoom(room);
-  setSelectedProject(null);
+  setSelectedProjectId(null);
 }}
                             className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm ${
                               active
@@ -352,7 +330,7 @@ const overdueSubtasks =
       {/* INDHOLD */}
       <main className="flex-1 bg-slate-50 p-8">
 
-        {selectedRoom === null ? (
+        {selectedRoom === null && selectedProject === null ? (
           <>
             <p className="text-sm text-slate-500">Overblik</p>
 
@@ -367,17 +345,17 @@ const overdueSubtasks =
             <div className="mt-8 grid grid-cols-4 gap-4">
 <StatCard
   title="Aktive projekter"
-  value="0"
+  value={String(activeProjects.length)}
 />
 
 <StatCard
   title="Budget"
-  value="0 kr."
+  value={`${totalBudget.toLocaleString("da-DK")} kr.`}
 />
 
 <StatCard
   title="Forbrugt"
-  value="0 kr."
+  value={`${totalSpent.toLocaleString("da-DK")} kr.`}
 />
               <StatCard
                 title="Rum"
@@ -412,14 +390,22 @@ const overdueSubtasks =
                 <p className="text-sm text-slate-500">Projekter</p>
                 <h3 className="text-xl font-semibold">Aktuelle projekter</h3>
 
-                <div className="mt-5 rounded-xl bg-slate-50 p-8 text-center">
-                  <p className="font-medium text-slate-700">
-                    Ingen aktive projekter endnu
-                  </p>
-
-                  <button className="mt-5 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white">
-                    + Nyt projekt
-                  </button>
+                <div className="mt-5 space-y-3">
+                  {activeProjects.length === 0 ? (
+                    <div className="rounded-xl bg-slate-50 p-8 text-center">
+                      <p className="font-medium text-slate-700">Ingen aktive projekter endnu</p>
+                      <p className="mt-2 text-sm text-slate-500">Vælg et rum i menuen for at oprette et projekt.</p>
+                    </div>
+                  ) : activeProjects.map((project) => (
+                    <button
+                      key={project.id}
+                      onClick={() => setSelectedProjectId(project.id)}
+                      className="flex w-full items-center justify-between gap-4 rounded-xl border border-slate-200 p-4 text-left hover:bg-slate-50"
+                    >
+                      <span className="font-medium text-slate-900">{project.name}</span>
+                      <span className="text-sm text-slate-500">{projectSpent(project).toLocaleString("da-DK")} / {(project.budget ?? 0).toLocaleString("da-DK")} kr.</span>
+                    </button>
+                  ))}
                 </div>
               </section>
 
@@ -428,10 +414,10 @@ const overdueSubtasks =
 ) : selectedProject !== null ? (
   <div>
   <button
-    onClick={() => setSelectedProject(null)}
+    onClick={() => setSelectedProjectId(null)}
     className="mb-6 text-sm font-medium text-slate-600 hover:text-slate-900"
   >
-    ← Tilbage til {selectedRoom.name}
+    ← Tilbage til {selectedRoom?.name ?? "overblik"}
   </button>
 
   <p className="text-sm text-slate-500">Projekt</p>
@@ -457,7 +443,6 @@ const overdueSubtasks =
       value={`${subtaskActualTotal.toLocaleString("da-DK")} kr.`}
     />
     <StatCard
-      title="Tilbage"
       title={remainingBudget >= 0 ? "Tilbage" : "Over budget total"}
       value={`${Math.abs(remainingBudget).toLocaleString("da-DK")} kr.`}
       danger={remainingBudget < 0}
@@ -509,6 +494,9 @@ const overdueSubtasks =
     <span className="font-medium text-slate-900">
       {completedSubtasks} af {totalSubtasks} delopgaver færdige ·{" "}
       {progressPercent} %
+    </span>
+  </p>
+
 {overdueSubtasks > 0 && (
   <p className="mt-2 text-sm font-medium text-red-600">
     {overdueSubtasks}{" "}
@@ -517,8 +505,6 @@ const overdueSubtasks =
       : "overskredne delopgaver"}
   </p>
 )}
-    </span>
-  </p>
 
 <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200">
   <div
@@ -784,14 +770,14 @@ const overdueSubtasks =
 </div>
 ) : (
   <RoomView
-    room={selectedRoom}
+    room={selectedRoom!}
     projects={localProjects}
     onNewProject={() => setShowNewProject(true)}
-    onProjectClick={(project) => setSelectedProject(project)}
+    onProjectClick={(project) => setSelectedProjectId(project.id)}
   />
 )}
 
-{showNewProject && (
+{showNewProject && selectedRoom && (
   <NewProjectForm
     room={selectedRoom}
     houseId={houseId}
@@ -827,13 +813,13 @@ const activeProjects = roomProjects.filter(
   (project) => project.status === "active"
 );
 
-const totalBudget = activeProjects.reduce(
+const totalBudget = roomProjects.reduce(
   (sum, project) => sum + (project.budget ?? 0),
   0
 );
 
-const totalSpent = activeProjects.reduce(
-  (sum, project) => sum + (project.actual_cost ?? 0),
+const totalSpent = roomProjects.reduce(
+  (sum, project) => sum + projectSpent(project),
   0
 );
 
@@ -970,4 +956,8 @@ function StatCard({
 </p>
     </div>
   );
+}
+// Use the same subtask spending in the project, room and house views.
+function projectSpent(project: Project) {
+  return project.subtasks.reduce((sum, subtask) => sum + (subtask.actual_cost ?? 0), 0);
 }
