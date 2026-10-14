@@ -254,6 +254,16 @@ const progressPercent =
     ? Math.round((completedSubtasks / totalSubtasks) * 100)
     : 0;
 
+const today = new Date().toISOString().split("T")[0];
+
+const overdueSubtasks =
+  selectedProject?.subtasks.filter(
+    (subtask) =>
+      subtask.due_date &&
+      subtask.due_date < today &&
+      subtask.status !== "completed"
+  ).length ?? 0;
+
   return (
     <div className="flex min-h-[calc(100vh-73px)]">
 
@@ -499,6 +509,14 @@ const progressPercent =
     <span className="font-medium text-slate-900">
       {completedSubtasks} af {totalSubtasks} delopgaver færdige ·{" "}
       {progressPercent} %
+{overdueSubtasks > 0 && (
+  <p className="mt-2 text-sm font-medium text-red-600">
+    {overdueSubtasks}{" "}
+    {overdueSubtasks === 1
+      ? "overskredet delopgave"
+      : "overskredne delopgaver"}
+  </p>
+)}
     </span>
   </p>
 
@@ -668,6 +686,21 @@ const progressPercent =
 {subtask.due_date
   ? new Date(`${subtask.due_date}T00:00:00`).toLocaleDateString("da-DK")
   : "Ingen"}
+
+{subtask.due_date &&
+  subtask.due_date < today &&
+  subtask.status !== "completed" && (
+    <strong className="ml-2 text-red-600">
+      Overskredet
+    </strong>
+  )}
+{subtask.due_date &&
+  subtask.due_date === today &&
+  subtask.status !== "completed" && (
+    <strong className="ml-2 text-amber-600">
+      I dag
+    </strong>
+  )}
   </span>
 )}
 </div>
