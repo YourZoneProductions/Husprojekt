@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import HouseApp from "@/components/husprojekt/HouseApp";
+import HouseSetup from "@/components/husprojekt/HouseSetup";
 import { LogoutButton } from "@/components/logout-button";
 
 export default async function ProtectedPage() {
@@ -49,14 +50,7 @@ export default async function ProtectedPage() {
   const house = Array.isArray(houses) ? houses[0] : houses;
 
   if (!house) {
-    return (
-      <main className="p-8">
-        <h1 className="text-2xl font-bold">HusProjekt</h1>
-        <p className="mt-2 text-gray-600">
-          Der blev ikke fundet et hus.
-        </p>
-      </main>
-    );
+    return <HouseSetup email={user.email} />;
   }
 const { data: projects, error: projectsError } = await supabase
   .from("projects")

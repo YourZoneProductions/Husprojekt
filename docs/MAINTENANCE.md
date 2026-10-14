@@ -19,18 +19,21 @@
 
 ## Prioriteret opgavekø
 - [x] Privat upload af PNG/JPG/WebP (maks. 10 MB) pr. etage, visning/zoom og valg af tidligere versioner. Upload ændrer ingen rum eller projekter.
-- [ ] Næste prioritet: forslag til rumgrænser, navne og m² med brugerens godkendelse. Automatisk billedanalyse er ikke tilsluttet; ingen betalt tjeneste uden godkendelse. Der er endnu ingen rigtige tegninger i floor_plans til at afprøve analysen på.
+- [ ] Plantegninger, næste del: forslag til rumgrænser, navne og m² med brugerens godkendelse. Automatisk billedanalyse er ikke tilsluttet; ingen betalt tjeneste uden godkendelse. Der er endnu ingen rigtige tegninger i floor_plans til at afprøve analysen på.
 - [x] Budget og delopgaver bruger fælles data; aktive projekter kan åbnes fra overblik.
 - [x] Mobil: responsiv menu som forbliver åben, læsbare økonomifelter og formularer uden vandret rulning.
 - [x] Projektredigering: navn, budget, start/slut og status; validering og direkte opdatering af oversigter.
 - [x] Delopgaver: synlige fejlbeskeder, gemmestatus og kontrol af ugyldige beløb.
-- [ ] Loginside og nulstilling: danske tekster, robust callback; bekræft produktions-URL i Supabase-indstillinger. Brugeren har bekræftet, at normalt login til live-appen virker.
+- [x] Loginside og nulstilling: danske tekster og testet callback.
+- [ ] Bekræft produktions-URL i Supabase-indstillinger og gennemfør rigtig e-mailtest. Brugeren har bekræftet, at normalt login til live-appen virker.
 - [x] Menu: vis antal aktive projekter pr. rum.
 - [ ] Standardskabeloner til projekter, fx køkken, uden automatisk at oprette opgaver i brugerens hus.
 - [ ] Plantegninger med klikbare rum og zoom. Find og verificér originale plantegningsfiler eller eksisterende floor_plans-data; opfind ikke geometri eller rumplaceringer. Hvis filer mangler, markér opgaven blokeret og fortsæt en uafhængig opgave.
 - [ ] Billeder/dokumenter pr. projekt med private Storage-politikker og validerede filgrænser.
 - [ ] Samlet tidsplan og visning af deadlines på tværs af rum.
-- [ ] Kontrolleret gennemgang af husmedlemskab og RLS med isolerede tests; svæk aldrig sikkerhed for at fjerne en advarsel.
+- [x] Kontrolleret gennemgang af husmedlemskab og RLS med isolerede, tilbagerullede tests.
+- [ ] Senere deling: eksplicitte, afgrænsede læserettigheder og tilbagekaldelse.
+- [ ] Downloadbar app efter stabil webbasis.
 
 ## Seneste verificerede udgangspunkt
 2026-10-14: Brugeren kan logge ind og se det eksisterende hus på live-siden. Supabase ACTIVE_HEALTHY, 1 hus, 2 etager og 19 rum. PR #1 blev flettet i main med brugerens udtrykkelige godkendelse. Første live-kildecommit: 476089444664be0d0681a08c92f3c58eb5b81192. Tidligere kode- og komponentchecks bestået; fuld browser-QA er ikke udført i denne kørsel.
@@ -46,3 +49,13 @@ Mobilmenu, projektredigering og synlige gemmefejl er implementeret. Komponenten 
 - Tilføjet migration `20261014070848_private_floor_plan_storage.sql`, som allerede er anvendt på det tilknyttede Supabase-projekt. Ændringen opretter kun bucket og afgrænsede Storage-politikker. Anvend ikke migrationen igen på samme projekt. Rummene er uændrede.
 - `npm run test:components` kører nu også floor-plans-testen med simulerede kald: filsignatur/MIME/størrelse, fejlet upload, oprydning, privat download, historik, etageskift, zoom og retry. Next-build, lint og TypeScript samt Sites-build kontrolleres før udgivelse. Ingen testfiler eller testmetadata skrives i brugerens rigtige hus.
 - Projektguidens næste del skal afdække følgearbejde via betingede spørgsmål (flytning af vask, vægge, installationer osv.), før brugeren vælger delopgaver. Formålet er overblik og realistisk budget; ingen prisgaranti eller nye betalte AI-tjenester.
+
+## Egne konti og boliger – 2026-10-14
+- Nyeste brugerprioritet: en webapp hvor hver bruger opretter egen konto og bolig med egne rum, projekter og budgetter. Deling med bank/håndværker kommer senere med udtrykkelige rettigheder til udvalgte data. Downloadbar app/PWA kommer efter stabil webbasis.
+- Implementeret dansk oprettelse/login, e-mailbekræftelses-callback (PKCE-kode og token_hash), sikre tilladte returadresser og tom bolig ved første login. En ny konto får ingen af Rasmus' data. Etager og rum kan tilføjes; m² er valgfrit og manuelt angivet.
+- Første bolig oprettes atomisk via `create_initial_house`; gentagne kald for samme konto returnerer eksisterende medlemsbolig. Direkte oprettelse af medlemskab er fjernet. Deling/invitationer er ikke implementeret. UI vælger fortsat én medlemsbolig; flere boliger pr. konto er en senere udvidelse.
+- Migration `20261014134321_secure_account_onboarding.sql` er allerede anvendt på Supabase. Den lukker selvtilmelding til vilkårlige hus-id'er og forhindrer projekt/rum-koblinger på tværs af huse. Den ændrer ingen eksisterende husdata. Må ikke køres igen på dette projekt.
+- `tests/account-isolation.sql` bruger syntetiske auth-/husdata i én transaktion med ROLLBACK: isolerede læsninger, idempotent oprettelse, afvist medlemskabsbypass, afvist anonym oprettelse og afvist projekt/rum på tværs af huse, også ved legitimt medlemskab af begge. Testen er kørt og bestået; ingen testkonti blev gemt.
+- Komponenttest dækker oprettelse, fejl/retry, duplikerede boligindsendelser, etage-/rumtilknytning, decimalareal og e-mailbekræftelsesnavigation. Fortsat ingen fuld browser-/rigtig e-mailtest i denne kørsel.
+- Siden forbliver privat og kun tilgængelig for ejeren via Sites. Andre brugere kan derfor ikke besøge oprettelsesflowet endnu. Offentlig adgang eller konkrete testbrugere kræver særskilt ændring af Sites-adgang. Kontrollér Supabases tilladte redirect-URL'er og gennemfør en rigtig e-mailtest før invitation af andre.
+- Næste afgrænsede arbejde: verificeret testbrugerforløb og derefter afgrænset deling med læseadgang/tilbagekaldelse, før tilbud og rollebaserede skriveadgange. Fortsæt også plantegningsforslag og betinget køkkenguide uden betalt AI.

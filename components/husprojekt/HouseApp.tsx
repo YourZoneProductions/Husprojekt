@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import NewProjectForm from "./NewProjectForm";
 import ProjectEditor from "./ProjectEditor";
 import FloorPlanPanel from "./FloorPlanPanel";
+import StructureManager from "./StructureManager";
 
 type Room = {
   id: string;
@@ -56,6 +57,7 @@ export default function HouseApp({
   const [errorMessage, setErrorMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [editingProject, setEditingProject] = useState(false);
+  const [showStructure, setShowStructure] = useState(false);
   const [menuOpen, setMenuOpen] = useState(true);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [showNewProject, setShowNewProject] = useState(false);
@@ -344,6 +346,12 @@ const overdueSubtasks =
             <p className="mt-2 text-slate-500">
               Her får du samlet overblik over husets projekter, økonomi og tidsplan.
             </p>
+
+            <button type="button" onClick={() => setShowStructure(open => !open)} className="mt-5 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700">{showStructure ? "Skjul etager og rum" : "Tilføj etage eller rum"}</button>
+            {(showStructure || floors.every(floor => !floor.rooms?.length)) && <StructureManager houseId={houseId} floors={floors} onSaved={floorId => {
+              setOpenFloors(current => current.includes(floorId) ? current : [...current, floorId]);
+              router.refresh();
+            }} />}
 
             <div className="mt-8 grid grid-cols-2 gap-3 xl:grid-cols-4">
 <StatCard
