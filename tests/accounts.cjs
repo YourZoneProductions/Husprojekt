@@ -37,7 +37,16 @@ async function submit(index=0){await act(async()=>r.root.findAllByType('form')[i
  await mount(Setup);await submit();assert.equal(calls.length,0);
  await change({placeholder:'Fx Vores hus'},' Mit hus ');
  fail=true;await submit();assert.equal(refreshes,0);assert.equal(r.root.findByProps({placeholder:'Fx Vores hus'}).props.value,' Mit hus ');
- fail=false;await submit();await submit();assert.equal(calls.length,2);assert.equal(refreshes,1);assert.deepEqual(calls[1],{name:'create_initial_house',args:{house_name:'Mit hus',first_floor_name:'Stueetage',include_basement:false}});
+ fail=false;await submit();await submit();assert.equal(calls.length,2);assert.equal(refreshes,1);assert.deepEqual(calls[1],{name:'create_house_with_floors',args:{house_name:'Mit hus',floor_names:['Stueetage']}});
+ calls=[];
+ await mount(Setup);await change({placeholder:'Fx Vores hus'},'Etagehus');
+ for(const label of ['1. Sal','2. Sal','Kælder']) await act(async()=>r.root.findByProps({'aria-label':label}).props.onChange({target:{checked:true}}));
+ await submit();assert.deepEqual(calls[0].args.floor_names,['Kælder','Stueetage','1. Sal','2. Sal']);
+ calls=[];await mount(Setup);await change({placeholder:'Fx Vores hus'},'Custom');
+ await act(async()=>r.root.findByProps({'aria-label':'Stueetage'}).props.onChange({target:{checked:false}}));
+ await submit();assert.equal(calls.length,0);
+ await act(async()=>r.root.findByProps({'aria-label':'Etage med eget navn'}).props.onChange({target:{checked:true}}));
+ await change({placeholder:'Fx 3. Sal'},'Tagetage');await submit();assert.deepEqual(calls[0].args.floor_names,['Tagetage']);
  calls=[];let saved=[];
  await mount(Structure,{houseId:'own-house',floors:[{id:'own-floor',name:'Stue'}],onSaved:id=>saved.push(id)});
  await change({placeholder:'Fx Køkken'},'Køkken');await change({placeholder:'Fx 12,5'},'-1');await submit(1);assert.equal(calls.length,0);

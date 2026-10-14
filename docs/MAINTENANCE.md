@@ -59,3 +59,10 @@ Mobilmenu, projektredigering og synlige gemmefejl er implementeret. Komponenten 
 - Komponenttest dækker oprettelse, fejl/retry, duplikerede boligindsendelser, etage-/rumtilknytning, decimalareal og e-mailbekræftelsesnavigation. Fortsat ingen fuld browser-/rigtig e-mailtest i denne kørsel.
 - Siden forbliver privat og kun tilgængelig for ejeren via Sites. Andre brugere kan derfor ikke besøge oprettelsesflowet endnu. Offentlig adgang eller konkrete testbrugere kræver særskilt ændring af Sites-adgang. Kontrollér Supabases tilladte redirect-URL'er og gennemfør en rigtig e-mailtest før invitation af andre.
 - Næste afgrænsede arbejde: verificeret testbrugerforløb og derefter afgrænset deling med læseadgang/tilbagekaldelse, før tilbud og rollebaserede skriveadgange. Fortsæt også plantegningsforslag og betinget køkkenguide uden betalt AI.
+
+## Flere etager ved boligoprettelse – 2026-10-14
+- Brugeren har bekræftet mobilfunktion og testkontoens adskilte tomme bolig. Ny brugerpræference: præcis stavning `1. Sal` og `2. Sal`.
+- Boligoprettelse tilbyder Kælder, Stueetage (forvalgt), 1. Sal, 2. Sal og en etage med eget navn. Mindst én etage kræves; tomme eller dobbelte navne afvises. Flere etager kan stadig tilføjes senere.
+- Ny RPC `create_house_with_floors` opretter bolig, ejermedlemskab og alle valgte etager i én transaktion. Samme brugerlock som den oprindelige RPC sikrer idempotens også mellem gamle/nye klienter. Gamle RPC bevares; eksisterende boliger ændres ikke.
+- Migration `20261014201627_multi_floor_onboarding.sql` er allerede anvendt på Supabase. `tests/multi-floor-isolation.sql` består med ROLLBACK: fire etager i korrekt navngivning/rækkefølge, eget navn, idempotens, adgangsadskillelse og anonym afvisning. Ingen testdata gemt.
+- Komponenttests dækker standardvalg, 1. Sal/2. Sal, ingen valgte etager og eget navn. TypeScript og builds kontrolleres før privat udgivelse. Browser-QA ikke tilgængelig i denne kørsel.
