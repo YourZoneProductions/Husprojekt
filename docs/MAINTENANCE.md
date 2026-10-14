@@ -71,3 +71,10 @@ Mobilmenu, projektredigering og synlige gemmefejl er implementeret. Komponenten 
 - Oprettelsen bruger nu begrebet Etager og områder. Alle valgte standarders navne er redigerbare, og flere egne områder (garage, skur, have osv.) kan tilføjes/fjernes før oprettelsen. Standardnavne 1. Sal og 2. Sal bevares.
 - Menu og formular til senere tilføjelse anvender samme begreb. Det er fortsat eksisterende floors/rooms-model og atomisk create_house_with_floors; ingen databaseskemaændring eller omdøbning af eksisterende data. Denne leverance tilføjer ikke efterfølgende omdøbning af gemte områder.
 - Tests dækker flere egne områder, omdøbning ved oprettelse og eksisterende budget/projekt/uploadfunktioner. TypeScript, lint og begge builds kontrolleres; ingen browser-QA tilgængelig.
+
+## Gantt-tidslinje – 2026-10-14
+- Samlet tidslinje i boligoverblik og projekttidslinje med delopgaver i valgt projekt. Begge bruger samme localProjects som budget og eksisterende formularer; ændringer opdaterer tidslinjen direkte.
+- Projekters expected_start/expected_end vises som perioder. Delopgaver har kun due_date i nuværende model og vises som fristpunkter; ingen opdigtet start/varighed eller schemaændring. Én kendt projektdato vises også som punkt med tydelig tekst.
+- Samme danske dagsdato og eksisterende definition af forsinkelse: uafsluttet + frist før i dag. Rød forsinket, gul frist i dag, grøn afsluttet; status og datoer står også som tekst. Projektoverskridelse vises med stiplet forlængelse til i dag. Manglende/ugyldige datoer markeres uden at skjule rækker.
+- Hele den kendte periode og i dag indgår i aksen. På mobil kan kun selve tidslinjen rulles vandret. Ingen afhængigheder, automatisk flytning eller træk af datoer endnu. Næste tidsplandel: eksplicit startdato/varighed for delopgaver og kortere periode/zoom ved lange tidsplaner.
+- tests/timeline.cjs dækker datoer/skudår, perioder, fristpunkter, overskredet/i dag/afsluttet, ukendte datoer, ugyldige intervaller og re-render. Eksisterende komponenttests, TypeScript, lint og Next-/Sites-build kontrolleres. Ingen testwrites i brugerens hus; browser-QA ikke tilgængelig.

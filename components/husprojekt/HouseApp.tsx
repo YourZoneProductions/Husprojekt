@@ -7,6 +7,7 @@ import NewProjectForm from "./NewProjectForm";
 import ProjectEditor from "./ProjectEditor";
 import FloorPlanPanel from "./FloorPlanPanel";
 import StructureManager from "./StructureManager";
+import ProjectTimeline from "./ProjectTimeline";
 
 type Room = {
   id: string;
@@ -353,6 +354,7 @@ const overdueSubtasks =
               router.refresh();
             }} />}
 
+            <ProjectTimeline projects={localProjects} today={today} />
             <div className="mt-8 grid grid-cols-2 gap-3 xl:grid-cols-4">
 <StatCard
   title="Aktive projekter"
@@ -467,6 +469,7 @@ const overdueSubtasks =
     {Math.abs(unallocatedBudget).toLocaleString("da-DK")} kr.
   </span>
 </p>
+  <ProjectTimeline projects={[selectedProject]} showSubtasks today={today} />
   <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
     <p className="text-sm text-slate-500">Tidsplan</p>
 
