@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import NewProjectForm from "./NewProjectForm";
 import ProjectEditor from "./ProjectEditor";
+import FloorPlanPanel from "./FloorPlanPanel";
 
 type Room = {
   id: string;
@@ -372,21 +373,7 @@ const overdueSubtasks =
 
             <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
 
-              <section className="rounded-xl border border-slate-200 bg-white p-6">
-                <p className="text-sm text-slate-500">Huset</p>
-                <h3 className="text-xl font-semibold">Plantegning</h3>
-
-                <div className="mt-5 flex h-64 items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50">
-                  <div className="text-center">
-                    <p className="font-medium text-slate-600">
-                      Plantegning kommer her
-                    </p>
-                    <p className="mt-1 text-sm text-slate-400">
-                      Senere gør vi rummene klikbare
-                    </p>
-                  </div>
-                </div>
-              </section>
+              <FloorPlanPanel floors={floors} />
 
               <section className="rounded-xl border border-slate-200 bg-white p-6">
                 <p className="text-sm text-slate-500">Projekter</p>

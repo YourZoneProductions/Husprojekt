@@ -18,6 +18,8 @@
 8. Ved manglende forbindelse eller fejl: undlad at påstå succes. Beskriv konkret blokering. Nulstil aldrig databasen, deaktivér ikke RLS, og opret ikke nye brugere som genvej.
 
 ## Prioriteret opgavekø
+- [x] Privat upload af PNG/JPG/WebP (maks. 10 MB) pr. etage, visning/zoom og valg af tidligere versioner. Upload ændrer ingen rum eller projekter.
+- [ ] Næste prioritet: forslag til rumgrænser, navne og m² med brugerens godkendelse. Automatisk billedanalyse er ikke tilsluttet; ingen betalt tjeneste uden godkendelse. Der er endnu ingen rigtige tegninger i floor_plans til at afprøve analysen på.
 - [x] Budget og delopgaver bruger fælles data; aktive projekter kan åbnes fra overblik.
 - [x] Mobil: responsiv menu som forbliver åben, læsbare økonomifelter og formularer uden vandret rulning.
 - [x] Projektredigering: navn, budget, start/slut og status; validering og direkte opdatering af oversigter.
@@ -31,7 +33,16 @@
 - [ ] Kontrolleret gennemgang af husmedlemskab og RLS med isolerede tests; svæk aldrig sikkerhed for at fjerne en advarsel.
 
 ## Seneste verificerede udgangspunkt
-2026-10-14: Brugeren kan logge ind og se det eksisterende hus på live-siden. Supabase ACTIVE_HEALTHY, 1 hus, 2 etager og 19 rum. PR #1 indeholder budgetrettelser; main er ikke flettet. Første live-kildecommit: 476089444664be0d0681a08c92f3c58eb5b81192. Tidligere kode- og komponentchecks bestået; fuld browser-QA er ikke udført i denne kørsel.
+2026-10-14: Brugeren kan logge ind og se det eksisterende hus på live-siden. Supabase ACTIVE_HEALTHY, 1 hus, 2 etager og 19 rum. PR #1 blev flettet i main med brugerens udtrykkelige godkendelse. Første live-kildecommit: 476089444664be0d0681a08c92f3c58eb5b81192. Tidligere kode- og komponentchecks bestået; fuld browser-QA er ikke udført i denne kørsel.
 
 ## Leverance under kontrol 2026-10-14
-Mobilmenu, projektredigering og synlige gemmefejl er implementeret. Komponenten testes med simulerede databasekald via `npm run test:components`, herunder fejlede writes og validering. Ingen ændringer i brugerens husdata er nødvendige for testen. GitHub main er fortsat ikke flettet: automatisk godkendelseskontrol kræver udtrykkelig mergegodkendelse.
+Mobilmenu, projektredigering og synlige gemmefejl er implementeret. Komponenten testes med simulerede databasekald via `npm run test:components`, herunder fejlede writes og validering. Ingen ændringer i brugerens husdata er nødvendige for testen. PR #1 er flettet; fremtidige fletninger kræver særskilt godkendelse.
+
+## Plantegninger, første del – 2026-10-14
+- Private filer ligger i Storage-bucket `floor-plans`, stier `<floor-id>/<tilfældig uuid>.<png|jpg|webp>`. Adgang kræver login og medlemskab af huset via etagen. Ingen public URL eller service role i klienten.
+- Versioner tilføjes som nye rækker i den eksisterende `floor_plans`-tabel. Hver upload får ny filsti; ingen eksisterende billeder, rum, m² eller projekter overskrives. Kun den nye fil ryddes op, hvis metadata ikke kunne gemmes.
+- Filer hentes med brugerens login via `storage.download`; browserens lokale blob-URL frigives ved versions-/etageskift. Ingen signerede URL'er gemmes i databasen.
+- PDF og automatisk rumgenkendelse er ikke understøttet endnu; det vises i UI. Udvikl forslag/godkendelse som næste del uden at kalde denne uploadversion automatisk analyse.
+- Tilføjet migration `20261014070848_private_floor_plan_storage.sql`, som allerede er anvendt på det tilknyttede Supabase-projekt. Ændringen opretter kun bucket og afgrænsede Storage-politikker. Anvend ikke migrationen igen på samme projekt. Rummene er uændrede.
+- `npm run test:components` kører nu også floor-plans-testen med simulerede kald: filsignatur/MIME/størrelse, fejlet upload, oprydning, privat download, historik, etageskift, zoom og retry. Next-build, lint og TypeScript samt Sites-build kontrolleres før udgivelse. Ingen testfiler eller testmetadata skrives i brugerens rigtige hus.
+- Projektguidens næste del skal afdække følgearbejde via betingede spørgsmål (flytning af vask, vægge, installationer osv.), før brugeren vælger delopgaver. Formålet er overblik og realistisk budget; ingen prisgaranti eller nye betalte AI-tjenester.
