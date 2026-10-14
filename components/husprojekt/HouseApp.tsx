@@ -9,6 +9,7 @@ import FloorPlanPanel from "./FloorPlanPanel";
 import StructureManager from "./StructureManager";
 import ProjectTimeline from "./ProjectTimeline";
 import ProjectPhotos from "./ProjectPhotos";
+import QuoteDraft from "./QuoteDraft";
 
 type Room = {
   id: string;
@@ -59,6 +60,7 @@ export default function HouseApp({
   const [errorMessage, setErrorMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [editingProject, setEditingProject] = useState(false);
+  const [quoteTaskId, setQuoteTaskId] = useState<string | null>(null);
   const [showStructure, setShowStructure] = useState(false);
   const [menuOpen, setMenuOpen] = useState(true);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
@@ -470,6 +472,7 @@ const overdueSubtasks =
     {Math.abs(unallocatedBudget).toLocaleString("da-DK")} kr.
   </span>
 </p>
+  {quoteTaskId && selectedProject.subtasks.some(task => task.id === quoteTaskId) && <QuoteDraft key={`quote-${selectedProject.id}-${quoteTaskId}`} project={selectedProject} houseId={houseId} taskId={quoteTaskId} onClose={() => setQuoteTaskId(null)} />}
   <ProjectPhotos key={`photos-${selectedProject.id}`} projectId={selectedProject.id} today={today} />
   <ProjectTimeline projects={[selectedProject]} showSubtasks today={today} />
   <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
@@ -575,6 +578,7 @@ const overdueSubtasks =
     key={subtask.id}
     className="rounded-xl border border-slate-200 p-4"
   >
+    <button type="button" className="mb-3 rounded-lg border border-slate-300 px-3 py-2 text-sm" onClick={() => setQuoteTaskId(subtask.id)}>Forbered tilbud</button>
     <div className="flex flex-wrap items-start gap-3">
       <input
         type="checkbox"
