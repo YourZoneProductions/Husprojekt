@@ -26,7 +26,7 @@ export default function StructureManager({ houseId, floors, onSaved }: {
     if (lock.current) return;
     const name = (kind === "floor" ? floorName : roomName).trim();
     if (!name) return setError("Skriv et navn.");
-    if (kind === "room" && !floors.some(floor => floor.id === floorId)) return setError("Vælg en etage til rummet.");
+    if (kind === "room" && !floors.some(floor => floor.id === floorId)) return setError("Vælg en etage eller et område til rummet.");
     const amount = area.trim() === "" ? null : Number(area.replace(",", "."));
     if (kind === "room" && amount !== null && (!Number.isFinite(amount) || amount <= 0)) return setError("Arealet skal være et positivt antal m², eller feltet skal være tomt.");
     lock.current = true;
@@ -36,7 +36,7 @@ export default function StructureManager({ houseId, floors, onSaved }: {
         ? await createClient().from("floors").insert({ house_id: houseId, name, sort_order: floors.length }).select("id").single()
         : await createClient().from("rooms").insert({ floor_id: floorId, name, area_m2: amount }).select("id").single();
       if (error || !data) throw error ?? new Error("Kunne ikke gemme");
-      if (kind === "floor") { setFloorName("");setNotice("Etagen er oprettet."); }
+      if (kind === "floor") { setFloorName("");setNotice("Etagen eller området er oprettet."); }
       else { setRoomName("");setArea("");setNotice("Rummet er oprettet. Du kan nu tilføje projekter i rummet."); }
       onSaved(kind === "floor" ? data.id : floorId);
     } catch {
@@ -46,22 +46,22 @@ export default function StructureManager({ houseId, floors, onSaved }: {
 
   const input = "mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base text-slate-900";
   return <section className="mt-6 rounded-xl border border-slate-200 bg-white p-4 sm:p-6" aria-busy={saving}>
-    <h3 className="text-lg font-semibold text-slate-900">Etager og rum</h3>
+    <h3 className="text-lg font-semibold text-slate-900">Etager og områder</h3>
     <p className="mt-2 text-sm text-slate-600">Tilføj dine egne rum. Areal er valgfrit og skal komme fra dine mål eller en tegning.</p>
     <div className="mt-5 grid gap-6 lg:grid-cols-2">
       <form onSubmit={event => void save("floor", event)}>
         <fieldset disabled={saving}>
-          <label className="block text-sm font-medium text-slate-700">Ny etage
-            <input className={input} value={floorName} maxLength={80} required placeholder="Fx 1. sal" onChange={event => setFloorName(event.target.value)} />
+          <label className="block text-sm font-medium text-slate-700">Ny etage eller nyt område
+            <input className={input} value={floorName} maxLength={80} required placeholder="Fx Garage" onChange={event => setFloorName(event.target.value)} />
           </label>
-          <button type="submit" className="mt-3 rounded-lg border border-slate-300 px-4 py-2 text-sm disabled:opacity-50">Tilføj etage</button>
+          <button type="submit" className="mt-3 rounded-lg border border-slate-300 px-4 py-2 text-sm disabled:opacity-50">Tilføj etage eller område</button>
         </fieldset>
       </form>
       <form onSubmit={event => void save("room", event)}>
         <fieldset disabled={saving || !floors.length} className="space-y-3">
-          <label className="block text-sm font-medium text-slate-700">Etage til rummet
+          <label className="block text-sm font-medium text-slate-700">Etage eller område til rummet
             <select className={input} value={floorId} onChange={event => setFloorId(event.target.value)} required>
-              {!floors.length && <option value="">Opret en etage først</option>}
+              {!floors.length && <option value="">Opret en etage eller et område først</option>}
               {floors.map(floor => <option key={floor.id} value={floor.id}>{floor.name}</option>)}
             </select>
           </label>

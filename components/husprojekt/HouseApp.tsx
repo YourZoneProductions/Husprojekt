@@ -241,7 +241,7 @@ const overdueSubtasks =
   return (
     <div className="flex min-h-[calc(100vh-73px)] flex-col md:flex-row">
       <button type="button" onClick={() => setMenuOpen(open => !open)} aria-expanded={menuOpen} aria-controls="room-menu" className="m-4 rounded-lg border border-slate-300 bg-white px-4 py-3 text-left text-sm font-medium md:hidden">
-        {menuOpen ? "Skjul rum og etager" : "Vis rum og etager"}
+        {menuOpen ? "Skjul rum og områder" : "Vis rum og områder"}
       </button>
 
       {/* SIDEBAR */}
@@ -259,7 +259,7 @@ const overdueSubtasks =
         </button>
 
         <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
-          Etager
+          Etager og områder
         </p>
 
         <div className="space-y-3">
@@ -347,7 +347,7 @@ const overdueSubtasks =
               Her får du samlet overblik over husets projekter, økonomi og tidsplan.
             </p>
 
-            <button type="button" onClick={() => setShowStructure(open => !open)} className="mt-5 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700">{showStructure ? "Skjul etager og rum" : "Tilføj etage eller rum"}</button>
+            <button type="button" onClick={() => setShowStructure(open => !open)} className="mt-5 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700">{showStructure ? "Skjul etager og områder" : "Tilføj etage, område eller rum"}</button>
             {(showStructure || floors.every(floor => !floor.rooms?.length)) && <StructureManager houseId={houseId} floors={floors} onSaved={floorId => {
               setOpenFloors(current => current.includes(floorId) ? current : [...current, floorId]);
               router.refresh();

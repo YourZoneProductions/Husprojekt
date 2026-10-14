@@ -22,10 +22,10 @@ const projectCard=()=>renderer.root.findAllByProps({className:'cursor-pointer ro
 (async()=>{
 await act(async()=>{renderer=Renderer.create(React.createElement(House,props))});
 card('Aktive projekter','1');card('Budget','12.000 kr.');card('Forbrugt','750 kr.');
-await click('Skjul rum og etager');assert.equal(button('Vis rum og etager').props['aria-expanded'],false);await click('Vis rum og etager');
+await click('Skjul rum og områder');assert.equal(button('Vis rum og områder').props['aria-expanded'],false);await click('Vis rum og områder');
 await starts('Nyt køkken');card('Forbrugt','250 kr.');includes('1 overskredet delopgave');
 await click('Rediger');await field('number',1,'1800');fail=true;await click('Gem');card('Forbrugt','250 kr.');assert.equal(renderer.root.findAllByProps({role:'alert'}).length,1);fail=false;await click('Gem');card('Forbrugt','1.800 kr.');
-await click('Overblik');card('Forbrugt','2.300 kr.');await starts('Køkken');card('Forbrugt','2.300 kr.');assert.equal(button('Skjul rum og etager').props['aria-expanded'],true);
+await click('Overblik');card('Forbrugt','2.300 kr.');await starts('Køkken');card('Forbrugt','2.300 kr.');assert.equal(button('Skjul rum og områder').props['aria-expanded'],true);
 await act(async()=>projectCard().props.onClick());await act(async()=>renderer.root.findByProps({type:'checkbox'}).props.onChange());includes('1 af 1 delopgaver færdige');
 await click('+ Ny delopgave');await act(async()=>renderer.root.findByProps({placeholder:'Navn på delopgave'}).props.onChange({target:{value:'Gulv'}}));await click('Opret delopgave');includes('Gulv');
 await click('← Tilbage til Køkken');await act(async()=>projectCard().props.onClick());includes('Gulv');includes('1 af 2 delopgaver færdige');

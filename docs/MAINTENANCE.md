@@ -66,3 +66,8 @@ Mobilmenu, projektredigering og synlige gemmefejl er implementeret. Komponenten 
 - Ny RPC `create_house_with_floors` opretter bolig, ejermedlemskab og alle valgte etager i én transaktion. Samme brugerlock som den oprindelige RPC sikrer idempotens også mellem gamle/nye klienter. Gamle RPC bevares; eksisterende boliger ændres ikke.
 - Migration `20261014201627_multi_floor_onboarding.sql` er allerede anvendt på Supabase. `tests/multi-floor-isolation.sql` består med ROLLBACK: fire etager i korrekt navngivning/rækkefølge, eget navn, idempotens, adgangsadskillelse og anonym afvisning. Ingen testdata gemt.
 - Komponenttests dækker standardvalg, 1. Sal/2. Sal, ingen valgte etager og eget navn. TypeScript og builds kontrolleres før privat udgivelse. Browser-QA ikke tilgængelig i denne kørsel.
+
+## Etager og områder – 2026-10-14
+- Oprettelsen bruger nu begrebet Etager og områder. Alle valgte standarders navne er redigerbare, og flere egne områder (garage, skur, have osv.) kan tilføjes/fjernes før oprettelsen. Standardnavne 1. Sal og 2. Sal bevares.
+- Menu og formular til senere tilføjelse anvender samme begreb. Det er fortsat eksisterende floors/rooms-model og atomisk create_house_with_floors; ingen databaseskemaændring eller omdøbning af eksisterende data. Denne leverance tilføjer ikke efterfølgende omdøbning af gemte områder.
+- Tests dækker flere egne områder, omdøbning ved oprettelse og eksisterende budget/projekt/uploadfunktioner. TypeScript, lint og begge builds kontrolleres; ingen browser-QA tilgængelig.

@@ -10,8 +10,9 @@ export default function HouseSetup({ email }: { email?: string }) {
   const [name, setName] = useState("");
   const options = ["Kælder", "Stueetage", "1. Sal", "2. Sal"];
   const [floors, setFloors] = useState<string[]>(["Stueetage"]);
-  const [custom, setCustom] = useState(false);
-  const [customName, setCustomName] = useState("");
+  const [names, setNames] = useState<Record<string, string>>({});
+  const [areas, setAreas] = useState<{id: number; name: string}[]>([]);
+  const nextArea = useRef(0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const lock = useRef(false);
@@ -19,10 +20,11 @@ export default function HouseSetup({ email }: { email?: string }) {
   async function create(event: React.FormEvent) {
     event.preventDefault();
     if (lock.current) return;
-    const floorNames = [...options.filter(value => floors.includes(value)), ...(custom ? [customName.trim()] : [])];
+    const floorNames = [...options.filter(value => floors.includes(value)).map(value => (names[value] ?? value).trim()), ...areas.map(area => area.name.trim())];
     if (!name.trim()) return setError("Skriv navn på boligen.");
-    if (!floorNames.length || floorNames.some(value => !value)) return setError("Vælg mindst én etage, og giv eventuelle egne etager et navn.");
-    if (new Set(floorNames.map(value => value.toLocaleLowerCase("da"))).size !== floorNames.length) return setError("Etagerne skal have forskellige navne.");
+    if (!floorNames.length || floorNames.some(value => !value)) return setError("Vælg mindst én etage eller ét område, og giv alle valgte et navn.");
+    if (new Set(floorNames.map(value => value.toLocaleLowerCase("da"))).size !== floorNames.length) return setError("Etager og områder skal have forskellige navne.");
+    if (floorNames.length > 20) return setError("Du kan oprette op til 20 etager og områder her. Flere kan tilføjes senere.");
     lock.current = true;
     setSaving(true);
     setError("");
@@ -54,17 +56,22 @@ export default function HouseSetup({ email }: { email?: string }) {
           <input className={input} value={name} maxLength={120} required placeholder="Fx Vores hus" onChange={event => setName(event.target.value)} />
         </label>
         <div className="space-y-3">
-          <p className="text-sm font-medium text-slate-700">Vælg boligens etager</p>
-          {options.map(option => <label key={option} className="flex min-h-11 items-center gap-3 text-sm text-slate-700">
-            <input type="checkbox" aria-label={option} checked={floors.includes(option)} onChange={event => setFloors(current => event.target.checked ? [...current, option] : current.filter(value => value !== option))} />{option}
-          </label>)}
-          <label className="flex min-h-11 items-center gap-3 text-sm text-slate-700">
-            <input type="checkbox" aria-label="Etage med eget navn" checked={custom} onChange={event => setCustom(event.target.checked)} />Etage med eget navn
-          </label>
-          {custom && <label className="block text-sm font-medium text-slate-700">Etagenavn
-            <input className={input} value={customName} maxLength={80} required placeholder="Fx 3. Sal" onChange={event => setCustomName(event.target.value)} />
-          </label>}
-          <p className="text-sm text-slate-500">Du kan tilføje flere etager senere.</p>
+          <p className="text-sm font-medium text-slate-700">Etager og områder</p>
+          <p className="text-sm text-slate-500">Vælg standarder, og tilpas navnene. Tilføj fx garage, skur eller have som egne områder.</p>
+          {options.map(option => <div key={option}>
+            <label className="flex min-h-11 items-center gap-3 text-sm text-slate-700">
+              <input type="checkbox" aria-label={option} checked={floors.includes(option)} onChange={event => setFloors(current => event.target.checked ? [...current, option] : current.filter(value => value !== option))} />{option}
+            </label>
+            {floors.includes(option) && <input className={input} aria-label={`Navn på ${option}`} value={names[option] ?? option} maxLength={80} required onChange={event => setNames(current => ({...current, [option]: event.target.value}))} />}
+          </div>)}
+          {areas.map(area => <div key={area.id} className="flex items-end gap-2">
+            <label className="min-w-0 flex-1 text-sm font-medium text-slate-700">Eget område
+              <input className={input} aria-label={`Navn på eget område ${area.id + 1}`} value={area.name} maxLength={80} required placeholder="Fx Garage, Skur eller Have" onChange={event => setAreas(current => current.map(value => value.id === area.id ? {...value, name: event.target.value} : value))} />
+            </label>
+            <button type="button" aria-label={`Fjern eget område ${area.id + 1}`} className="rounded-lg border border-slate-300 px-3 py-2 text-sm" onClick={() => setAreas(current => current.filter(value => value.id !== area.id))}>Fjern</button>
+          </div>)}
+          <button type="button" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" onClick={() => { const id = nextArea.current++; setAreas(current => [...current, {id, name: ""}]); }}>Tilføj eget område</button>
+          <p className="text-sm text-slate-500">Du kan tilføje flere etager og områder senere.</p>
         </div>
       </fieldset>
       {error && <p role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-800">{error}</p>}
