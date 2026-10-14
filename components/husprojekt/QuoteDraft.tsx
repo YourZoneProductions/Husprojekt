@@ -3,13 +3,16 @@
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Project } from "./HouseApp";
-import type { ProjectPhoto } from "./ProjectPhotos";
+import ProjectPhotos, { type ProjectPhoto } from "./ProjectPhotos";
+import QuoteAccess from "./QuoteAccess";
 import { dateDay } from "@/lib/timeline";
 
 type Plan = {id:string;floor_id:string;file_path:string|null;created_at:string;floors:{name:string;house_id:string}|{name:string;house_id:string}[]};
 const phases:Record<string,string>={before:"Før",during:"Undervejs",after:"Efter"};
-export default function QuoteDraft({project, taskId, houseId, onClose}: {project:Project; taskId:string; houseId:string; onClose:()=>void}) {
+export default function QuoteDraft({project, taskId, houseId, onClose, onPhotoUploaded}: {project:Project; taskId:string; houseId:string; onClose:()=>void; onPhotoUploaded?:()=>void}) {
  const task=project.subtasks.find(value=>value.id===taskId)!;
+ const [uploading,setUploading]=useState(false);
+ const [showUpload,setShowUpload]=useState(false);
  const [title,setTitle]=useState(task?.name??"");
  const [description,setDescription]=useState(task?.description??"");
  const [requestedBy,setRequestedBy]=useState(task?.due_date??"");
@@ -42,28 +45,34 @@ export default function QuoteDraft({project, taskId, houseId, onClose}: {project
   if(photoIds.some(id=>!photos.some(photo=>photo.id===id))||(planId&&!plans.some(plan=>plan.id===planId)))return "Et valgt bilag er ikke længere tilgængeligt. Hent kladden igen.";
   return "";
  }
- async function save(){
-  if(lock.current||loading||!ready)return;const problem=validate();if(problem){setError(problem);return;}
+ async function save(): Promise<boolean>{
+  if(lock.current||loading||!ready||uploading)return false;const problem=validate();if(problem){setError(problem);return false;}
   lock.current=true;setSaving(true);setError("");setNotice("");
   try{const {error}=await createClient().from("quote_drafts").upsert({project_id:project.id,subtask_id:taskId,title:title.trim(),description:description.trim(),requested_by:requestedBy||null,photo_ids:photoIds,floor_plan_id:planId||null},{onConflict:"subtask_id"});
-   if(error)throw error;if(alive.current)setNotice("Tilbudskladden er gemt privat. Ingen har fået adgang eller modtaget en besked.");
-  }catch{if(alive.current)setError("Kladden kunne ikke gemmes. Dine indtastninger er bevaret.");}
+   if(error)throw error;if(alive.current)setNotice("Tilbudskladden er gemt privat. Ingen har fået adgang eller modtaget en besked.");return true;
+  }catch{if(alive.current)setError("Kladden kunne ikke gemmes. Dine indtastninger er bevaret.");return false;}
   finally{lock.current=false;if(alive.current)setSaving(false);}
  }
  const selectedPhotos=photos.filter(photo=>photoIds.includes(photo.id));const selectedPlan=plans.find(plan=>plan.id===planId);
  const planLabel=(plan:Plan)=>`${(Array.isArray(plan.floors)?plan.floors[0]:plan.floors)?.name??"Plantegning"} · ${new Date(plan.created_at).toLocaleDateString("da-DK",{timeZone:"Europe/Copenhagen"})}`;
  const field="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base";
  return <section ref={section} className="mt-6 min-w-0 rounded-xl border border-slate-300 bg-white p-4 sm:p-6" aria-label="Tilbudskladde" aria-busy={loading||saving}>
-  <div className="flex items-start justify-between gap-3"><div><h3 className="text-xl font-semibold">Forbered tilbud</h3><p className="mt-1 text-sm text-slate-600">Delopgave: {task?.name}</p></div><button type="button" disabled={saving} className="rounded-lg border px-3 py-2 text-sm" onClick={onClose}>Luk kladde</button></div>
-  <p className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-600">Privat kladde. Håndværkeradgang og afsendelse er ikke tilkoblet endnu. Budget, forbrug og andre delopgaver indgår ikke i pakken.</p>
+  <div className="flex items-start justify-between gap-3"><div><h3 className="text-xl font-semibold">Forbered tilbud</h3><p className="mt-1 text-sm text-slate-600">Delopgave: {task?.name}</p></div><button type="button" disabled={saving||uploading} className="rounded-lg border px-3 py-2 text-sm" onClick={onClose}>Luk kladde</button></div>
+  <p className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-600">Privat kladde. Modtageradgang oprettes først, når du gennemser pakken og vælger en modtager. Budget, forbrug og andre delopgaver indgår ikke i pakken.</p>
   {loading&&<p role="status" className="mt-3 text-sm">Henter kladde og bilag…</p>}
-  {error&&<p role="alert" className="mt-3 text-sm text-red-800">{error}<button type="button" disabled={saving} className="ml-3 underline" onClick={()=>setRetry(value=>value+1)}>Hent kladden igen</button></p>}
+  {error&&<p role="alert" className="mt-3 text-sm text-red-800">{error}<button type="button" disabled={saving||uploading} className="ml-3 underline" onClick={()=>setRetry(value=>value+1)}>Hent kladden igen</button></p>}
   {notice&&<p role="status" className="mt-3 text-sm text-emerald-800">{notice}</p>}
-  {!preview ? <fieldset disabled={loading||saving||!ready} className="mt-4 space-y-4">
+  {!preview ? <fieldset disabled={loading||saving||!ready||uploading} className="mt-4 space-y-4">
    <label className="block text-sm font-medium">Titel<input aria-label="Tilbudstitel" className={field} maxLength={120} value={title} onChange={event=>{setTitle(event.target.value);setNotice("");}}/></label>
    <label className="block text-sm font-medium">Beskriv arbejdet<textarea aria-label="Tilbudsbeskrivelse" className={field} rows={4} maxLength={5000} value={description} onChange={event=>{setDescription(event.target.value);setNotice("");}} placeholder="Hvad skal udføres, og hvad skal håndværkeren afklare?"/></label>
    <label className="block min-w-0 text-sm font-medium">Ønsket afslutningsdato (valgfri)<input aria-label="Ønsket afslutningsdato" className={field} type="date" value={requestedBy} onChange={event=>setRequestedBy(event.target.value)}/></label>
-   <div><p className="text-sm font-medium">Vælg billeder fra dette projekt · højst 20</p>{!photos.length&&<p className="mt-2 text-sm text-slate-500">Tilføj billeder i projektets billedarkiv, og åbn kladden igen.</p>}
+   <button type="button" className="rounded-lg border px-4 py-3 text-sm" onClick={()=>setShowUpload(value=>!value)}>{showUpload?"Luk billedupload":"Tilføj nyt billede"}</button>
+   {showUpload && <ProjectPhotos key={project.id} projectId={project.id} today={new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Copenhagen"}).format(new Date())} uploadOnly onUploadingChange={setUploading} onUploaded={photo=>{
+    setPhotos(current=>[photo,...current.filter(value=>value.id!==photo.id)]);onPhotoUploaded?.();
+    setPhotoIds(current=>current.length<20?[...current.filter(id=>id!==photo.id),photo.id]:current);
+    setNotice("Billedet er gemt i arkivet. Kontrollér afkrydsningen og gem kladden for at bevare bilagsvalget.");
+   }}/>}
+   <div><p className="text-sm font-medium">Vælg billeder fra dette projekt · højst 20</p>{!photos.length&&<p className="mt-2 text-sm text-slate-500">Brug Tilføj nyt billede ovenfor, eller vælg billeder fra projektets arkiv.</p>}
     {photos.map(photo=><label key={photo.id} className="mt-2 flex min-h-11 items-center gap-3 rounded-lg border p-3 text-sm"><input type="checkbox" aria-label={`Vedhæft billede ${photo.id}`} checked={photoIds.includes(photo.id)} onChange={event=>setPhotoIds(current=>event.target.checked?[...current,photo.id]:current.filter(id=>id!==photo.id))}/><span className="min-w-0 break-words">{phases[photo.stage]} · {photo.taken_on} · {photo.description||"Uden beskrivelse"}</span></label>)}
    </div>
    <label className="block text-sm font-medium">Plantegning (valgfri)<select aria-label="Vedhæft plantegning" className={field} value={planId} onChange={event=>setPlanId(event.target.value)}><option value="">Ingen plantegning</option>{plans.map(plan=><option key={plan.id} value={plan.id}>{planLabel(plan)}</option>)}</select></label>
@@ -74,11 +83,12 @@ export default function QuoteDraft({project, taskId, houseId, onClose}: {project
    <p className="text-sm font-medium">Bilag: {selectedPhotos.length} billeder{selectedPlan?" og 1 plantegning":""}</p>
    {selectedPhotos.map(photo=><QuoteAttachment key={photo.id} label={`${phases[photo.stage]} · ${photo.taken_on} · ${photo.description||"Uden beskrivelse"}`} bucket="project-photos" path={photo.file_path} prefix={project.id}/>)}
    {selectedPlan?.file_path&&<QuoteAttachment label={planLabel(selectedPlan)} bucket="floor-plans" path={selectedPlan.file_path} prefix={selectedPlan.floor_id}/>}
-   <div className="flex flex-wrap gap-3"><button type="button" disabled={saving} className="rounded-lg border px-4 py-3 text-sm" onClick={()=>setPreview(false)}>Ret kladden</button><button type="button" disabled={saving||loading||!ready} className="rounded-lg bg-slate-900 px-4 py-3 text-sm text-white" onClick={()=>void save()}>{saving?"Gemmer…":"Gem privat kladde"}</button></div>
+   <QuoteAccess taskId={taskId} onSave={save}/>
+   <div className="flex flex-wrap gap-3"><button type="button" disabled={saving||uploading} className="rounded-lg border px-4 py-3 text-sm" onClick={()=>setPreview(false)}>Ret kladden</button><button type="button" disabled={saving||loading||!ready||uploading} className="rounded-lg bg-slate-900 px-4 py-3 text-sm text-white" onClick={()=>void save()}>{saving?"Gemmer…":"Gem privat kladde"}</button></div>
   </div>}
  </section>;
 }
-function QuoteAttachment({label,bucket,path,prefix}:{label:string;bucket:string;path:string;prefix:string}){
+export function QuoteAttachment({label,bucket,path,prefix}:{label:string;bucket:string;path:string;prefix:string}){
  const [url,setUrl]=useState("");const [failed,setFailed]=useState(false);
  useEffect(()=>{let cancelled=false,objectUrl="";
   async function load(){try{if(!path.startsWith(`${prefix}/`))throw new Error();const {data,error}=await createClient().storage.from(bucket).download(path);if(error||!data)throw new Error();if(!cancelled){objectUrl=URL.createObjectURL(data);setUrl(objectUrl);}}catch{if(!cancelled)setFailed(true);}}

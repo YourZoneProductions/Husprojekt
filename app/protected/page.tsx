@@ -109,7 +109,7 @@ if (projectsError) {
 
           <div className="flex flex-wrap items-center justify-end gap-3 text-xs text-slate-500">
             <span className="break-all">{user.email}</span>
-            <LogoutButton />
+            <a href="/protected/offers" className="text-sm underline">Modtagne opgaver</a><LogoutButton />
           </div>
         </div>
       </header>

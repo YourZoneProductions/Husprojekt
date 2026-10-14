@@ -10,7 +10,7 @@ const stages = {before:"Før",during:"Undervejs",after:"Efter"};
 const bucket = "project-photos";
 const fields = "id,project_id,stage,taken_on,description,file_path,created_at";
 
-export default function ProjectPhotos({projectId, today}: {projectId: string; today: string}) {
+export default function ProjectPhotos({projectId, today, uploadOnly = false, onUploaded, onUploadingChange}: {projectId: string; today: string; uploadOnly?: boolean; onUploaded?: (photo: ProjectPhoto) => void; onUploadingChange?: (busy: boolean) => void}) {
   const [photos,setPhotos]=useState<ProjectPhoto[]>([]);
   const [stage,setStage]=useState("before");
   const [date,setDate]=useState(today);
@@ -25,6 +25,7 @@ export default function ProjectPhotos({projectId, today}: {projectId: string; to
   const [retry,setRetry]=useState(0);
   const lock=useRef(false),alive=useRef(true),generation=useRef(0);
   const input=useRef<HTMLInputElement>(null);
+  useEffect(()=>{onUploadingChange?.(saving);},[saving,onUploadingChange]);
   useEffect(()=>{
     alive.current=true;const current=++generation.current;setLoading(true);setError("");
     async function load(){try{
@@ -51,7 +52,7 @@ export default function ProjectPhotos({projectId, today}: {projectId: string; to
       const result=await client.from("project_photos").insert({project_id:projectId,stage,taken_on:date,description:description.trim(),file_path:path}).select(fields).single();
       if(result.error||!result.data)throw new Error("Billedets oplysninger kunne ikke gemmes. Prøv igen.");
       saved=true;
-      if(alive.current){generation.current++;setPhotos(current=>[result.data,...current].sort((a,b)=>b.taken_on.localeCompare(a.taken_on)||b.created_at.localeCompare(a.created_at)));setSelected(result.data.id);setFilter("all");setDescription("");setFile(null);if(input.current)input.current.value="";setNotice("Billedet er gemt privat i projektets historik.");}
+      if(alive.current){generation.current++;setPhotos(current=>[result.data,...current].sort((a,b)=>b.taken_on.localeCompare(a.taken_on)||b.created_at.localeCompare(a.created_at)));setSelected(result.data.id);setFilter("all");setDescription("");setFile(null);if(input.current)input.current.value="";setNotice(uploadOnly ? "Billedet er gemt i arkivet. Kontrollér bilagsvalget i kladden." : "Billedet er gemt privat i projektets historik.");onUploaded?.(result.data as ProjectPhoto);}
     }catch(failure){
       if(path&&!saved){try{const result=await client.storage.from(bucket).remove([path]);if(result.error)throw result.error;}catch{if(alive.current)setNotice("En fil kan være uploadet uden at være tilknyttet. Dine tidligere billeder er bevaret.");}}
       if(alive.current)setError(failure instanceof Error?failure.message:"Billedet kunne ikke gemmes.");
@@ -61,7 +62,7 @@ export default function ProjectPhotos({projectId, today}: {projectId: string; to
   const photo=visible.find(photo=>photo.id===selected)??visible[0];
   const field="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base";
   return <section className="mt-6 min-w-0 rounded-xl border border-slate-200 bg-white p-4 sm:p-6" aria-label="Projektets billedarkiv" aria-busy={loading||saving}>
-    <h3 className="text-xl font-semibold text-slate-900">Billedarkiv</h3>
+    <h3 className="text-xl font-semibold text-slate-900">{uploadOnly ? "Nyt billede til tilbuddet" : "Billedarkiv"}</h3>
     <p className="mt-2 text-sm text-slate-600">Gem projektets historie før, undervejs og efter arbejdet. Billederne er private for husets medlemmer og deles ikke med håndværkere endnu.</p>
     <form onSubmit={upload} className="mt-4">
       <fieldset disabled={saving||loading} className="grid min-w-0 gap-4 sm:grid-cols-2">
@@ -75,10 +76,12 @@ export default function ProjectPhotos({projectId, today}: {projectId: string; to
     {loading&&<p role="status" className="mt-4 text-sm">Henter billedarkiv…</p>}
     {error&&<div role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-800">{error}<button type="button" disabled={saving} className="ml-3 underline" onClick={()=>setRetry(value=>value+1)}>Hent arkivet igen</button></div>}
     {notice&&<p role="status" className="mt-4 text-sm text-emerald-800">{notice}</p>}
+    {!uploadOnly && <>
     <label className="mt-6 block text-sm font-medium">Vis fase<select aria-label="Filtrér billedarkiv" className={field} value={filter} onChange={event=>setFilter(event.target.value)}><option value="all">Alle billeder ({photos.length})</option>{Object.entries(stages).map(([value,label])=><option key={value} value={value}>{label} ({photos.filter(photo=>photo.stage===value).length})</option>)}</select></label>
     {!loading&&!visible.length&&!error&&<p className="mt-4 text-sm text-slate-500">Ingen billeder i denne visning endnu.</p>}
     {!!visible.length&&<label className="mt-4 block text-sm font-medium">Gemte billeder<select aria-label="Vælg gemt projektbillede" className={field} value={photo?.id??""} onChange={event=>setSelected(event.target.value)}>{visible.map(item=><option key={item.id} value={item.id}>{item.taken_on} · {stages[item.stage as keyof typeof stages]} · {item.description.slice(0,70)||"Uden beskrivelse"}</option>)}</select></label>}
     {photo&&<PhotoImage key={photo.id} photo={photo}/>}
+    </>}
   </section>;
 }
 

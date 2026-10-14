@@ -45,7 +45,7 @@ export default function HouseSetup({ email }: { email?: string }) {
   const input = "mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base text-slate-900";
   return <div className="min-h-screen bg-slate-50 p-4 sm:p-8">
     <header className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3">
-      <span className="text-sm text-slate-600">{email}</span><LogoutButton />
+      <span className="text-sm text-slate-600">{email}</span><a href="/protected/offers" className="text-sm underline">Modtagne opgaver</a><LogoutButton />
     </header>
     <form onSubmit={create} className="mx-auto mt-10 max-w-xl rounded-2xl border border-slate-200 bg-white p-5 sm:p-8">
       <p className="text-sm font-medium text-slate-500">Velkommen til Husprojekt</p>

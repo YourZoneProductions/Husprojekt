@@ -60,6 +60,7 @@ export default function HouseApp({
   const [errorMessage, setErrorMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [editingProject, setEditingProject] = useState(false);
+  const [photoVersion, setPhotoVersion] = useState(0);
   const [quoteTaskId, setQuoteTaskId] = useState<string | null>(null);
   const [showStructure, setShowStructure] = useState(false);
   const [menuOpen, setMenuOpen] = useState(true);
@@ -472,8 +473,8 @@ const overdueSubtasks =
     {Math.abs(unallocatedBudget).toLocaleString("da-DK")} kr.
   </span>
 </p>
-  {quoteTaskId && selectedProject.subtasks.some(task => task.id === quoteTaskId) && <QuoteDraft key={`quote-${selectedProject.id}-${quoteTaskId}`} project={selectedProject} houseId={houseId} taskId={quoteTaskId} onClose={() => setQuoteTaskId(null)} />}
-  <ProjectPhotos key={`photos-${selectedProject.id}`} projectId={selectedProject.id} today={today} />
+  {quoteTaskId && selectedProject.subtasks.some(task => task.id === quoteTaskId) && <QuoteDraft key={`quote-${selectedProject.id}-${quoteTaskId}`} project={selectedProject} houseId={houseId} taskId={quoteTaskId} onPhotoUploaded={() => setPhotoVersion(value => value + 1)} onClose={() => setQuoteTaskId(null)} />}
+  <ProjectPhotos key={`photos-${selectedProject.id}-${photoVersion}`} projectId={selectedProject.id} today={today} />
   <ProjectTimeline projects={[selectedProject]} showSubtasks today={today} />
   <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
     <p className="text-sm text-slate-500">Tidsplan</p>

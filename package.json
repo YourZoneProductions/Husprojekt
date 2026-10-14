@@ -5,7 +5,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test:components": "node tests/husprojekt.cjs && node tests/floor-plans.cjs && node tests/accounts.cjs && node tests/auth-callback.cjs && node tests/timeline.cjs && node tests/project-photos.cjs && node tests/quote-drafts.cjs"
+    "test:components": "node tests/husprojekt.cjs && node tests/floor-plans.cjs && node tests/accounts.cjs && node tests/auth-callback.cjs && node tests/timeline.cjs && node tests/project-photos.cjs && node tests/quote-drafts.cjs && node tests/quote-access.cjs"
   },
   "dependencies": {
     "@radix-ui/react-checkbox": "^1.3.1",
