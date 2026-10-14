@@ -35,6 +35,15 @@ async function handleCreateProject() {
     return;
   }
 
+  const amount = Number(budget);
+  if (!Number.isFinite(amount) || amount < 0) {
+    setErrorMessage("Budgettet skal være et positivt beløb eller nul.");
+    return;
+  }
+  if (startDate && endDate && endDate < startDate) {
+    setErrorMessage("Slutdato må ikke ligge før startdato.");
+    return;
+  }
   setIsSaving(true);
   setErrorMessage("");
 
@@ -46,7 +55,7 @@ async function handleCreateProject() {
       house_id: houseId,
       name: name.trim(),
       status: "active",
-      budget: budget ? Number(budget) : 0,
+      budget: amount,
       expected_start: startDate || null,
       expected_end: endDate || null,
     })
@@ -129,6 +138,7 @@ onCancel();
             <input
               type="number"
               min="0"
+              step="0.01"
               value={budget}
               onChange={(e) => setBudget(e.target.value)}
               placeholder="0"
