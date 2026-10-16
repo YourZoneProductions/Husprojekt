@@ -5,6 +5,11 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import NewProjectForm from "./NewProjectForm";
 import ProjectEditor from "./ProjectEditor";
+import FloorPlanPanel from "./FloorPlanPanel";
+import StructureManager from "./StructureManager";
+import ProjectTimeline from "./ProjectTimeline";
+import ProjectPhotos from "./ProjectPhotos";
+import QuoteDraft from "./QuoteDraft";
 
 type Room = {
   id: string;
@@ -55,6 +60,9 @@ export default function HouseApp({
   const [errorMessage, setErrorMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [editingProject, setEditingProject] = useState(false);
+  const [photoVersion, setPhotoVersion] = useState(0);
+  const [quoteTaskId, setQuoteTaskId] = useState<string | null>(null);
+  const [showStructure, setShowStructure] = useState(false);
   const [menuOpen, setMenuOpen] = useState(true);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [showNewProject, setShowNewProject] = useState(false);
@@ -238,7 +246,7 @@ const overdueSubtasks =
   return (
     <div className="flex min-h-[calc(100vh-73px)] flex-col md:flex-row">
       <button type="button" onClick={() => setMenuOpen(open => !open)} aria-expanded={menuOpen} aria-controls="room-menu" className="m-4 rounded-lg border border-slate-300 bg-white px-4 py-3 text-left text-sm font-medium md:hidden">
-        {menuOpen ? "Skjul rum og etager" : "Vis rum og etager"}
+        {menuOpen ? "Skjul rum og områder" : "Vis rum og områder"}
       </button>
 
       {/* SIDEBAR */}
@@ -256,7 +264,7 @@ const overdueSubtasks =
         </button>
 
         <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
-          Etager
+          Etager og områder
         </p>
 
         <div className="space-y-3">
@@ -344,6 +352,13 @@ const overdueSubtasks =
               Her får du samlet overblik over husets projekter, økonomi og tidsplan.
             </p>
 
+            <button type="button" onClick={() => setShowStructure(open => !open)} className="mt-5 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700">{showStructure ? "Skjul etager og områder" : "Tilføj etage, område eller rum"}</button>
+            {(showStructure || floors.every(floor => !floor.rooms?.length)) && <StructureManager houseId={houseId} floors={floors} onSaved={floorId => {
+              setOpenFloors(current => current.includes(floorId) ? current : [...current, floorId]);
+              router.refresh();
+            }} />}
+
+            <ProjectTimeline projects={localProjects} today={today} />
             <div className="mt-8 grid grid-cols-2 gap-3 xl:grid-cols-4">
 <StatCard
   title="Aktive projekter"
@@ -372,21 +387,7 @@ const overdueSubtasks =
 
             <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
 
-              <section className="rounded-xl border border-slate-200 bg-white p-6">
-                <p className="text-sm text-slate-500">Huset</p>
-                <h3 className="text-xl font-semibold">Plantegning</h3>
-
-                <div className="mt-5 flex h-64 items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50">
-                  <div className="text-center">
-                    <p className="font-medium text-slate-600">
-                      Plantegning kommer her
-                    </p>
-                    <p className="mt-1 text-sm text-slate-400">
-                      Senere gør vi rummene klikbare
-                    </p>
-                  </div>
-                </div>
-              </section>
+              <FloorPlanPanel floors={floors} />
 
               <section className="rounded-xl border border-slate-200 bg-white p-6">
                 <p className="text-sm text-slate-500">Projekter</p>
@@ -472,6 +473,9 @@ const overdueSubtasks =
     {Math.abs(unallocatedBudget).toLocaleString("da-DK")} kr.
   </span>
 </p>
+  {quoteTaskId && selectedProject.subtasks.some(task => task.id === quoteTaskId) && <QuoteDraft key={`quote-${selectedProject.id}-${quoteTaskId}`} project={selectedProject} houseId={houseId} taskId={quoteTaskId} onPhotoUploaded={() => setPhotoVersion(value => value + 1)} onClose={() => setQuoteTaskId(null)} />}
+  <ProjectPhotos key={`photos-${selectedProject.id}-${photoVersion}`} projectId={selectedProject.id} today={today} />
+  <ProjectTimeline projects={[selectedProject]} showSubtasks today={today} />
   <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
     <p className="text-sm text-slate-500">Tidsplan</p>
 
@@ -575,6 +579,7 @@ const overdueSubtasks =
     key={subtask.id}
     className="rounded-xl border border-slate-200 p-4"
   >
+    <button type="button" className="mb-3 rounded-lg border border-slate-300 px-3 py-2 text-sm" onClick={() => setQuoteTaskId(subtask.id)}>Forbered tilbud</button>
     <div className="flex flex-wrap items-start gap-3">
       <input
         type="checkbox"

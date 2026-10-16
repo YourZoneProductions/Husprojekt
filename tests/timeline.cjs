@@ -1,0 +1,20 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),Module=require('node:module'),ts=require('typescript'),React=require('react'),{act}=React,Renderer=require('react-test-renderer');
+globalThis.IS_REACT_ACT_ENVIRONMENT=true;
+const load=Module._load;Module._load=function(id,parent,...args){return load.call(this,id.startsWith('@/')?process.cwd()+'/'+id.slice(2):id,parent,...args);};
+require.extensions['.ts']=require.extensions['.tsx']=(m,name)=>m._compile(ts.transpileModule(fs.readFileSync(name,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2020}}).outputText,name);
+const {dateDay,timelineRows,timelineStatus,timelineRange}=require('../lib/timeline.ts');
+const Timeline=require('../components/husprojekt/ProjectTimeline.tsx').default;
+const project={id:'p1',name:'Køkken',status:'active',expected_start:'2026-10-01',expected_end:'2026-10-10',subtasks:[{id:'s1',name:'El',status:'todo',due_date:'2026-10-14'},{id:'s2',name:'Gulv',status:'completed',due_date:'2026-10-01'},{id:'s3',name:'Plan',status:'todo',due_date:null}]};
+(async()=>{
+ assert.equal(dateDay('2026-02-30'),null);assert.equal(dateDay('bad'),null);assert.notEqual(dateDay('2028-02-29'),null);
+ const rows=timelineRows([project],true);assert.equal(rows.length,4);assert.equal(rows[1].start,null,'Never invent task start dates');assert.equal(timelineRows([project],false).length,1);
+ assert.equal(timelineStatus(rows[0],'2026-10-14'),'Frist overskredet');assert.equal(timelineStatus(rows[1],'2026-10-14'),'Frist i dag');assert.equal(timelineStatus(rows[2],'2026-10-14'),'Afsluttet');
+ const range=timelineRange(rows,'2026-10-14');assert(range.first<dateDay('2026-10-01'));assert(range.last>dateDay('2026-10-14'));
+ let r;await act(async()=>{r=Renderer.create(React.createElement(Timeline,{projects:[project],showSubtasks:true,today:'2026-10-14'}));});
+ const text=n=>typeof n==='string'?n:n.children?.map(text).join('')??'';
+ assert(text(r.root).includes('Dato mangler'));assert.equal(r.root.findAllByProps({title:'Tid efter planlagt afslutning'}).length,1);
+ await act(async()=>r.update(React.createElement(Timeline,{projects:[{...project,status:'completed'}],showSubtasks:true,today:'2026-10-14'})));assert.equal(r.root.findAllByProps({title:'Tid efter planlagt afslutning'}).length,0);
+ await act(async()=>r.update(React.createElement(Timeline,{projects:[{...project,expected_end:'2026-09-01'}],today:'2026-10-14'})));assert(text(r.root).includes('Slutdato ligger før startdato'));
+ await act(async()=>r.update(React.createElement(Timeline,{projects:[],today:'2026-10-14'})));assert(text(r.root).includes('Opret et projekt'));await act(async()=>r.unmount());
+ console.log('PASS: timeline dates, leap days, milestones, overdue/today/completed states, invalid ranges, missing dates and refresh.');
+})().catch(e=>{console.error(e);process.exitCode=1;});
