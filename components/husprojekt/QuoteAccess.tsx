@@ -1,5 +1,6 @@
 "use client";
 import {useEffect,useRef,useState} from "react";
+import QuoteResponses from "./QuoteResponses";
 import {createClient} from "@/lib/supabase/client";
 type Share={id:string;recipient_email:string;created_at:string;revoked_at:string|null};
 export default function QuoteAccess({taskId,onSave}:{taskId:string;onSave:()=>Promise<boolean>}){
@@ -18,6 +19,6 @@ export default function QuoteAccess({taskId,onSave}:{taskId:string;onSave:()=>Pr
   <button type="button" disabled={busy} className="rounded-lg bg-slate-900 px-4 py-3 text-sm text-white disabled:opacity-50" onClick={()=>void grant()}>{busy?"Behandler…":"Gem og giv adgang til valgt modtager"}</button>
   {error&&<p role="alert" className="text-sm text-red-800">{error}</p>}{notice&&<p role="status" className="text-sm text-emerald-800">{notice}</p>}
   <p className="text-sm">Modtageren finder pakken under <a className="underline" href="/protected/offers">Modtagne opgaver</a>.</p>
-  {shares.map(share=><div key={share.id} className="flex flex-wrap items-center justify-between gap-2 rounded border p-3 text-sm"><span className="min-w-0 break-words">{share.recipient_email} · {new Date(share.created_at).toLocaleString("da-DK",{timeZone:"Europe/Copenhagen"})} · {share.revoked_at?"Tilbagekaldt":"Aktiv"}</span>{!share.revoked_at&&<button type="button" disabled={busy} className="rounded border px-3 py-2" onClick={()=>void revoke(share.id)}>Tilbagekald adgang</button>}</div>)}
+  {shares.map(share=><div key={share.id} className="space-y-3 rounded border p-3 text-sm"><span className="min-w-0 break-words">{share.recipient_email} · {new Date(share.created_at).toLocaleString("da-DK",{timeZone:"Europe/Copenhagen"})} · {share.revoked_at?"Tilbagekaldt":"Aktiv"}</span>{!share.revoked_at&&<button type="button" disabled={busy} className="rounded border px-3 py-2" onClick={()=>void revoke(share.id)}>Tilbagekald adgang</button>}<QuoteResponses shareId={share.id}/></div>)}
  </section>;
 }
